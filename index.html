@@ -1965,5 +1965,296 @@ body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
 
 })();
 </script>
+  <script>
+(function () {
+  const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
+
+  let db = null;
+  let projectsCache = [];
+
+  function notify(text) {
+    if (typeof window.toast === "function") window.toast(text);
+    else alert(text);
+  }
+
+  function loadSupabase() {
+    if (window.supabase?.createClient) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("کتابخانه Supabase بارگذاری نشد."));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function getClient() {
+    if (db) return db;
+    await loadSupabase();
+
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: "sb-ypeukrgjhvfgndmqmnnd-auth-token"
+      }
+    });
+
+    return db;
+  }
+
+  function projectSelector() {
+    let select = document.getElementById("tnxOnlineProject");
+    if (select) return select;
+
+    const input = document.getElementById("tnaFileInput");
+    if (!input) return null;
+
+    const field = input.closest(".field") || input.parentElement;
+    const wrapper = document.createElement("div");
+    wrapper.className = "field";
+
+    const label = document.createElement("label");
+    label.textContent = "پروژهٔ آنلاین مقصد";
+    label.htmlFor = "tnxOnlineProject";
+
+    select = document.createElement("select");
+    select.id = "tnxOnlineProject";
+    select.innerHTML = '<option value="">در حال دریافت پروژه‌ها…</option>';
+
+    wrapper.append(label, select);
+    field.parentNode.insertBefore(wrapper, field);
+
+    select.addEventListener("change", loadCloudFiles);
+    return select;
+  }
+
+  async function loadOnlineProjects() {
+    const select = projectSelector();
+    if (!select) return;
+
+    const client = await getClient();
+    const session = await client.auth.getSession();
+
+    if (!session.data.session) {
+      select.innerHTML = '<option value="">ابتدا وارد سایت شوید</option>';
+      return;
+    }
+
+    const result = await client
+      .from("projects")
+      .select("id,name")
+      .order("created_at", { ascending: false });
+
+    if (result.error) {
+      select.innerHTML = '<option value="">خطا در دریافت پروژه‌ها</option>';
+      notify("دریافت پروژه‌ها ناموفق بود: " + result.error.message);
+      return;
+    }
+
+    projectsCache = result.data || [];
+    const previous = select.value;
+
+    select.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = projectsCache.length
+      ? "یک پروژه انتخاب کنید…"
+      : "پروژهٔ آنلاین پیدا نشد";
+    select.appendChild(first);
+
+    projectsCache.forEach(project => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = project.name;
+      select.appendChild(option);
+    });
+
+    if (projectsCache.some(project => project.id === previous)) {
+      select.value = previous;
+    } else if (projectsCache.length === 1) {
+      select.value = projectsCache[0].id;
+    }
+  }
+
+  async function loadCloudFiles() {
+    const body = document.getElementById("tnaFilesRows");
+    if (!body) return;
+
+    const client = await getClient();
+    const session = await client.auth.getSession();
+
+    if (!session.data.session) {
+      body.innerHTML = '<tr><td colspan="6">برای دیدن فایل‌ها وارد شوید.</td></tr>';
+      return;
+    }
+
+    const result = await client
+      .from("project_files")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (result.error) {
+      body.innerHTML = "";
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 6;
+      cell.textContent = "خطا در دریافت فایل‌ها: " + result.error.message;
+      row.appendChild(cell);
+      body.appendChild(row);
+      return;
+    }
+
+    const selectedProject = projectSelector()?.value || "";
+    const files = (result.data || []).filter(file =>
+      !selectedProject || file.project_id === selectedProject
+    );
+
+    body.innerHTML = "";
+
+    if (!files.length) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 6;
+      cell.textContent = "هنوز فایلی در فضای آنلاین ثبت نشده است.";
+      row.appendChild(cell);
+      body.appendChild(row);
+      return;
+    }
+
+    files.forEach(file => {
+      const row = document.createElement("tr");
+      const project = projectsCache.find(item => item.id === file.project_id);
+
+      [
+        file.file_name || "—",
+        project?.name || "—",
+        file.file_type || "—",
+        Math.max(1, Math.ceil(Number(file.file_size || 0) / 1024)) + " KB",
+        file.created_at ? new Date(file.created_at).toLocaleString("fa-IR") : "—"
+      ].forEach(value => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+
+      const actionCell = document.createElement("td");
+      const downloadButton = document.createElement("button");
+      downloadButton.className = "btn soft small";
+      downloadButton.textContent = "دانلود";
+
+      downloadButton.onclick = async () => {
+        const popup = window.open("about:blank", "_blank");
+        const signed = await client.storage
+          .from("project-files")
+          .createSignedUrl(file.file_path, 600);
+
+        if (signed.error) {
+          popup?.close();
+          notify("دانلود ناموفق بود: " + signed.error.message);
+          return;
+        }
+
+        if (popup) popup.location.href = signed.data.signedUrl;
+        else location.href = signed.data.signedUrl;
+      };
+
+      actionCell.appendChild(downloadButton);
+      row.appendChild(actionCell);
+      body.appendChild(row);
+    });
+  }
+
+  window.TNA_loadCloudFiles = loadCloudFiles;
+
+  window.TNA_uploadFiles = async function () {
+    try {
+      const client = await getClient();
+      const input = document.getElementById("tnaFileInput");
+      const select = projectSelector();
+      const files = Array.from(input?.files || []);
+
+      if (!input) return notify("فیلد انتخاب فایل پیدا نشد.");
+      if (!files.length) return notify("ابتدا یک فایل انتخاب کنید.");
+
+      const sessionResult = await client.auth.getSession();
+      const user = sessionResult.data.session?.user;
+
+      if (!user) return notify("ابتدا از حساب خود وارد سایت شوید.");
+      if (!select?.value) return notify("ابتدا یک پروژهٔ آنلاین انتخاب کنید.");
+
+      const projectId = select.value;
+      let uploaded = 0;
+
+      for (const file of files) {
+        if (file.size > 50 * 1024 * 1024) {
+          notify("فایل «" + file.name + "» بزرگ‌تر از ۵۰ مگابایت است.");
+          continue;
+        }
+
+        const safeName = file.name.replace(/[\\/]/g, "_")
+          .replace(/[^A-Za-z0-9._-]/g, "_");
+        const randomId = crypto.randomUUID
+          ? crypto.randomUUID()
+          : String(Date.now());
+
+        const path = projectId + "/" + user.id + "/" + randomId + "-" + safeName;
+
+        const upload = await client.storage
+          .from("project-files")
+          .upload(path, file, {
+            upsert: false,
+            contentType: file.type || "application/octet-stream"
+          });
+
+        if (upload.error) {
+          notify("آپلود ناموفق بود: " + upload.error.message);
+          continue;
+        }
+
+        const saved = await client.from("project_files").insert({
+          project_id: projectId,
+          file_name: file.name,
+          file_path: path,
+          file_type: file.name.split(".").pop() || "",
+          file_size: file.size,
+          uploaded_by: user.id
+        });
+
+        if (saved.error) {
+          await client.storage.from("project-files").remove([path]);
+          notify("ثبت مشخصات فایل ناموفق بود: " + saved.error.message);
+          continue;
+        }
+
+        uploaded++;
+      }
+
+      input.value = "";
+      await loadCloudFiles();
+      notify(uploaded + " فایل در فضای آنلاین ذخیره شد.");
+    } catch (error) {
+      notify("اتصال یا آپلود ناموفق بود: " + (error.message || error));
+    }
+  };
+
+  document.addEventListener("click", event => {
+    const button = event.target.closest("button,a");
+    if (button && /فایل/.test(button.textContent || "")) {
+      setTimeout(async () => {
+        try {
+          await loadOnlineProjects();
+          await loadCloudFiles();
+        } catch (error) {
+          console.error(error);
+        }
+      }, 400);
+    }
+  });
+})();
+</script>
 </body>
 </html>
