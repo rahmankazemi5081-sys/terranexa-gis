@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
 <style>
-:root{--blue:#1688f8;--teal:#10bba9;--orange:#f39832;--red:#e95468;--green:#19a879;--bg:#f2f6fb;--panel:#fff;--soft:#f7faff;--text:#17273d;--muted:#708198;--line:#e2eaf3;--side:#08172a;--shadow:0 8px 25px #1a304c14}
+:root{--blue:#1688f8;--teal:#10bba9;--orange:#f39832;--red:#e95468;--green:#19a879;--bg:#f2f6fb;--panel:#fff;--soft:#f7faff;--text:#17273d;--muted:#708198;--line:#e2eaf3;--side:#08172a;--shadow:0 [...]
 body.dark{--bg:#07111e;--panel:#0e1d30;--soft:#13253b;--text:#eaf2fc;--muted:#92a4b9;--line:#22364d}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Tahoma,Arial,sans-serif}
@@ -68,7 +68,7 @@ th{background:var(--soft);color:var(--muted)}
 .map-tools{position:absolute;z-index:500;bottom:15px;right:12px;display:flex;flex-direction:column;gap:6px}
 .map-info{position:absolute;z-index:500;bottom:15px;left:12px;max-width:270px;padding:10px 12px;background:var(--panel);border-radius:11px;box-shadow:var(--shadow);font-size:11px;line-height:1.8}
 .leaflet-popup-content{direction:rtl;text-align:right;font-family:Tahoma;line-height:1.8}
-.modal{position:fixed;inset:0;background:#071426aa;z-index:200;display:grid;place-items:center;padding:15px}
+.modal{position:fixed;inset:0;background:#071426aa;z-index:9999;display:grid;place-items:center;padding:15px}
 .modal.hidden{display:none}
 .modal-card{width:min(560px,100%);max-height:92vh;overflow:auto;padding:20px;background:var(--panel);border-radius:17px}
 .modal-head{display:flex;justify-content:space-between;align-items:center}
@@ -80,7 +80,7 @@ th{background:var(--soft);color:var(--muted)}
 .toast.show{transform:translate(-50%,0);opacity:1}
 .mobile{display:none}
 .small-note{padding:15px;color:var(--muted);font-size:13px;line-height:1.9}
-@media(max-width:850px){.sidebar{transform:translateX(100%);transition:.2s}.sidebar.open{transform:none}.main{margin-right:0}.mobile{display:block}.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.topbar{padding:0 10px}.page{padding:13px}.notice{margin:12px}}
+@media(max-width:850px){.sidebar{transform:translateX(100%);transition:.2s}.sidebar.open{transform:none}.main{margin-right:0}.mobile{display:block}.stats{grid-template-columns:1fr 1fr}.grid{grid-t[...]
 @media(max-width:520px){.user-icon{display:none}.stats{gap:8px}.stat{padding:13px}.stat b{font-size:22px}.row{grid-template-columns:1fr}.map-search{right:48px;left:48px}}
 </style>
 </head>
@@ -113,7 +113,7 @@ th{background:var(--soft);color:var(--muted)}
   </header>
 
   <div class="notice">
-    سایت آماده اجراست. در این مرحله پروژه‌ها در همین مرورگر ذخیره می‌شوند؛ برای حساب کاربری و دیتابیس مشترک، بعداً باید سرور را جداگانه متصل کنیم.
+    سایت آماده اجراست. در این مرحله پروژه‌ها در همین مرورگر ذخیره می‌شوند؛ برای حساب کاربری و دیتابیس مشترک…
   </div>
 
   <section id="dashboard" class="page active">
@@ -174,7 +174,7 @@ th{background:var(--soft);color:var(--muted)}
 
   <section id="filesPage" class="page">
     <div class="page-head"><div><h1>فایل‌های مهندسی</h1><p>فضای فایل آنلاین در مرحله اتصال سرور فعال می‌شود.</p></div></div>
-    <div class="card"><div class="small-note">این صفحه فعلاً نمای بخش فایل‌هاست. فایل‌ها هنوز در فضای ابری بارگذاری نمی‌شوند؛ برای جلوگیری از گم‌شدن داده، این قابلیت را بعد از اتصال فضای ذخیره‌سازی فعال می‌کنیم.</div></div>
+    <div class="card"><div class="small-note">این صفحه فعلاً نمای بخش فایل‌هاست. فایل‌ها هنوز در فضای ابری بارگذاری نمی‌شوند؛ […]
   </section>
 
   <section id="reportsPage" class="page">
