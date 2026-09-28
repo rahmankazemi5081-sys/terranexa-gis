@@ -1716,5 +1716,254 @@ body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
   init();
 })();
 </script>
+  <script>
+(function(){
+  const DB_NAME = "terranexa_files_db_v1";
+  const STORE = "files";
+
+  function openFilesDB(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function(){
+        const db = req.result;
+        if(!db.objectStoreNames.contains(STORE)){
+          const store = db.createObjectStore(STORE, { keyPath: "id" });
+          store.createIndex("projectId", "projectId");
+        }
+      };
+      req.onsuccess = ()=>resolve(req.result);
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function getAllFiles(){
+    const db = await openFilesDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE, "readonly");
+      const store = tx.objectStore(STORE);
+      const req = store.getAll();
+      req.onsuccess = ()=>resolve(req.result || []);
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function getFile(id){
+    const db = await openFilesDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE, "readonly");
+      const store = tx.objectStore(STORE);
+      const req = store.get(id);
+      req.onsuccess = ()=>resolve(req.result);
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function putFile(fileRecord){
+    const db = await openFilesDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE, "readwrite");
+      const store = tx.objectStore(STORE);
+      const req = store.put(fileRecord);
+      req.onsuccess = ()=>resolve();
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  async function removeFile(id){
+    const db = await openFilesDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE, "readwrite");
+      const store = tx.objectStore(STORE);
+      const req = store.delete(id);
+      req.onsuccess = ()=>resolve();
+      req.onerror = ()=>reject(req.error);
+    });
+  }
+
+  function safeText(v){
+    return String(v || "").replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function getProjectsForFiles(){
+    try{
+      return JSON.parse(localStorage.getItem("terranexa_projects_clean_v1") || "[]");
+    }catch(e){
+      return [];
+    }
+  }
+
+  function fileSize(bytes){
+    bytes = Number(bytes || 0);
+    if(bytes > 1024 * 1024){
+      return (bytes / 1024 / 1024).toFixed(2) + " MB";
+    }
+    return Math.ceil(bytes / 1024) + " KB";
+  }
+
+  window.TNA_renderFiles = async function(){
+    const section = document.getElementById("filesPage");
+    if(!section) return;
+
+    const projects = getProjectsForFiles();
+
+    section.innerHTML = `
+      <div class="head">
+        <div>
+          <h1>فایل‌ها</h1>
+          <p>آپلود، مشاهده، دانلود و حذف فایل‌های مهندسی پروژه‌ها</p>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px;margin-bottom:18px;">
+        <div class="row">
+          <div class="field">
+            <label>انتخاب پروژه</label>
+            <select id="tnaFileProject">
+              ${
+                projects.length
+                ? projects.map(p => `<option value="${safeText(p.id)}">${safeText(p.name)}</option>`).join("")
+                : `<option value="">ابتدا یک پروژه ثبت کنید</option>`
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label>انتخاب فایل</label>
+            <input id="tnaFileInput" type="file" multiple accept=".pdf,.dwg,.dxf,.kml,.kmz,.zip,.rar,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.txt">
+          </div>
+        </div>
+
+        <button class="btn" onclick="TNA_uploadFiles()">آپلود فایل</button>
+
+        <p style="font-size:12px;color:#6b7c93;line-height:1.8;margin-top:12px;">
+          فایل‌ها فعلاً داخل مرورگر همین دستگاه ذخیره می‌شوند و قابل دانلود هستند.
+          برای آپلود واقعی چندکاربره، مرحله بعد Supabase Storage را وصل می‌کنیم.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">لیست فایل‌های ثبت‌شده</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>نام فایل</th>
+                <th>پروژه</th>
+                <th>نوع</th>
+                <th>حجم</th>
+                <th>تاریخ</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="tnaFilesRows">
+              <tr><td colspan="6" class="empty">در حال بارگذاری...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const files = await getAllFiles();
+    const rows = document.getElementById("tnaFilesRows");
+
+    rows.innerHTML = files.length ? files.map(f => `
+      <tr>
+        <td>${safeText(f.name)}</td>
+        <td>${safeText(f.projectName || "—")}</td>
+        <td>${safeText(f.ext || "FILE")}</td>
+        <td>${fileSize(f.size)}</td>
+        <td>${safeText(f.createdAt)}</td>
+        <td>
+          <button class="btn soft small" onclick="TNA_downloadFile('${safeText(f.id)}')">دانلود</button>
+          <button class="btn red small" onclick="TNA_deleteFile('${safeText(f.id)}')">حذف</button>
+        </td>
+      </tr>
+    `).join("") : `<tr><td colspan="6" class="empty">هنوز فایلی ثبت نشده است.</td></tr>`;
+  };
+
+  window.TNA_uploadFiles = async function(){
+    const projectId = document.getElementById("tnaFileProject")?.value;
+    const input = document.getElementById("tnaFileInput");
+
+    if(!projectId){
+      alert("اول یک پروژه ثبت و انتخاب کنید.");
+      return;
+    }
+
+    if(!input || !input.files || !input.files.length){
+      alert("فایلی انتخاب نشده است.");
+      return;
+    }
+
+    const projects = getProjectsForFiles();
+    const project = projects.find(p => p.id === projectId);
+
+    for(const file of Array.from(input.files)){
+      const ext = (file.name.split(".").pop() || "FILE").toUpperCase();
+
+      await putFile({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+        projectId: projectId,
+        projectName: project ? project.name : "",
+        name: file.name,
+        ext: ext,
+        size: file.size,
+        blob: file,
+        createdAt: new Date().toLocaleString("fa-IR")
+      });
+    }
+
+    input.value = "";
+    alert("فایل‌ها با موفقیت ذخیره شدند ✅");
+    TNA_renderFiles();
+  };
+
+  window.TNA_downloadFile = async function(id){
+    const f = await getFile(id);
+    if(!f){
+      alert("فایل پیدا نشد.");
+      return;
+    }
+
+    const url = URL.createObjectURL(f.blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  };
+
+  window.TNA_deleteFile = async function(id){
+    if(!confirm("این فایل حذف شود؟")) return;
+    await removeFile(id);
+    alert("فایل حذف شد.");
+    TNA_renderFiles();
+  };
+
+  const oldGoPage = window.goPage;
+  window.goPage = function(id, btn){
+    if(typeof oldGoPage === "function"){
+      oldGoPage(id, btn);
+    }
+
+    if(id === "filesPage"){
+      setTimeout(()=>TNA_renderFiles(), 100);
+    }
+  };
+
+  document.addEventListener("click", function(e){
+    const text = e.target && e.target.innerText ? e.target.innerText : "";
+    if(text.includes("فایل")){
+      setTimeout(()=>TNA_renderFiles(), 200);
+    }
+  });
+
+})();
+</script>
 </body>
 </html>
