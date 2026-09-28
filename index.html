@@ -1025,6 +1025,696 @@ function locateMe(){
 
 refresh();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<style>
+body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
+#tnxAuthLayer{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#061221,#0b2744);display:grid;place-items:center;padding:18px;color:#17273d}
+.tnx-card{width:min(430px,100%);background:#fff;border-radius:20px;padding:25px;box-shadow:0 20px 70px #0005;direction:rtl}
+.tnx-card h2{margin:8px 0}
+.tnx-card p{font-size:13px;line-height:1.8;color:#65758b}
+.tnx-card label{display:block;font-size:12px;font-weight:bold;margin:12px 0 6px}
+.tnx-card input{width:100%;padding:11px;border:1px solid #dce5ef;border-radius:10px;box-sizing:border-box}
+.tnx-card button{margin-top:12px}
+.tnx-auth-msg{font-size:12px;line-height:1.8;margin-top:10px;color:#c03952}
+#tnxUsersPage{min-height:60vh}
+</style>
+
+<div id="tnxAuthLayer">
+  <div class="tnx-card">
+    <div style="font-size:13px;color:#1688f8;font-weight:bold">⌖ TerraNexa GIS</div>
+    <h2>ورود به سامانه</h2>
+    <p>برای دسترسی به پروژه‌ها وارد شوید یا حساب بسازید. عضویت کاربران جدید پس از تأیید مدیر فعال می‌شود.</p>
+
+    <form id="tnxLoginForm">
+      <label>ایمیل</label>
+      <input id="tnxLoginEmail" type="email" autocomplete="email" required>
+      <label>رمز عبور</label>
+      <input id="tnxLoginPassword" type="password" autocomplete="current-password" required>
+      <button class="btn" style="width:100%">ورود</button>
+    </form>
+
+    <form id="tnxRegisterForm" class="hidden">
+      <label>نام و نام خانوادگی</label>
+      <input id="tnxRegisterName" autocomplete="name" required>
+      <label>ایمیل</label>
+      <input id="tnxRegisterEmail" type="email" autocomplete="email" required>
+      <label>رمز عبور، حداقل ۶ نویسه</label>
+      <input id="tnxRegisterPassword" type="password" minlength="6" autocomplete="new-password" required>
+      <button class="btn" style="width:100%">ثبت‌نام</button>
+    </form>
+
+    <div id="tnxPendingBox" class="hidden">
+      <h2>در انتظار تأیید مدیر</h2>
+      <p>حسابتان ساخته شده است. پس از تأیید مدیر، «بررسی مجدد» را بزنید.</p>
+      <button id="tnxCheckApproval" class="btn">بررسی مجدد</button>
+      <button id="tnxLogoutPending" class="btn soft">خروج</button>
+    </div>
+
+    <button id="tnxSwitchForm" class="btn soft" style="width:100%">ساخت حساب جدید</button>
+    <div id="tnxAuthMessage" class="tnx-auth-msg"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  document.body.classList.add("tnx-locked");
+
+  const URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
+  const PUBLISHABLE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
+
+  const authLayer = document.getElementById("tnxAuthLayer");
+  const loginForm = document.getElementById("tnxLoginForm");
+  const registerForm = document.getElementById("tnxRegisterForm");
+  const pendingBox = document.getElementById("tnxPendingBox");
+  const message = document.getElementById("tnxAuthMessage");
+
+  if (!window.supabase || !window.supabase.createClient) {
+    message.textContent = "کتابخانهٔ اتصال بارگذاری نشد. اینترنت را بررسی و صفحه را تازه کنید.";
+    return;
+  }
+
+  const db = window.supabase.createClient(URL, PUBLISHABLE_KEY);
+  let currentUser = null;
+  let currentProfile = null;
+  let pendingCount = -1;
+
+  function say(text, good){
+    message.style.color = good ? "#16865e" : "#c03952";
+    message.textContent = text;
+  }
+
+  function mode(register){
+    loginForm.classList.toggle("hidden", register);
+    registerForm.classList.toggle("hidden", !register);
+    pendingBox.classList.add("hidden");
+    document.getElementById("tnxSwitchForm").textContent =
+      register ? "بازگشت به ورود" : "ساخت حساب جدید";
+    say("", true);
+  }
+
+  document.getElementById("tnxSwitchForm").addEventListener("click", function(){
+    mode(registerForm.classList.contains("hidden"));
+  });
+
+  async function enter(user, logLogin){
+    currentUser = user;
+    say("در حال بررسی حساب...", true);
+
+    if (logLogin) {
+      await db.from("login_events").insert({
+        user_id: user.id,
+        email: user.email,
+        success: true,
+        user_agent: navigator.userAgent
+      });
+    }
+
+    const result = await db.from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (result.error) {
+      say("خطای دریافت حساب: " + result.error.message);
+      return;
+    }
+
+    if (!result.data) {
+      say("پروفایل این حساب در دیتابیس پیدا نشد. مدیر باید تنظیم جدول profiles را بررسی کند.");
+      return;
+    }
+
+    currentProfile = result.data;
+
+    if (!currentProfile.approved) {
+      loginForm.classList.add("hidden");
+      registerForm.classList.add("hidden");
+      pendingBox.classList.remove("hidden");
+      document.getElementById("tnxSwitchForm").classList.add("hidden");
+      say("", true);
+      return;
+    }
+
+    authLayer.classList.add("hidden");
+    document.body.classList.remove("tnx-locked");
+    document.getElementById("tnxSwitchForm").classList.remove("hidden");
+
+    addAccountControls();
+    installCloudFiles();
+    installAdminPage();
+
+    await loadCloudProjects();
+
+    if (currentProfile.role === "admin") {
+      await checkPendingUsers();
+      setInterval(checkPendingUsers, 30000);
+    }
+  }
+
+  loginForm.addEventListener("submit", async function(event){
+    event.preventDefault();
+    say("در حال ورود...", true);
+
+    const result = await db.auth.signInWithPassword({
+      email: document.getElementById("tnxLoginEmail").value.trim(),
+      password: document.getElementById("tnxLoginPassword").value
+    });
+
+    if (result.error) {
+      say("ورود ناموفق: " + result.error.message);
+      return;
+    }
+
+    await enter(result.data.user, true);
+  });
+
+  registerForm.addEventListener("submit", async function(event){
+    event.preventDefault();
+    say("در حال ثبت‌نام...", true);
+
+    const result = await db.auth.signUp({
+      email: document.getElementById("tnxRegisterEmail").value.trim(),
+      password: document.getElementById("tnxRegisterPassword").value,
+      options: {
+        data: {
+          full_name: document.getElementById("tnxRegisterName").value.trim()
+        },
+        emailRedirectTo: location.origin + location.pathname
+      }
+    });
+
+    if (result.error) {
+      say("ثبت‌نام ناموفق: " + result.error.message);
+      return;
+    }
+
+    if (result.data.session) {
+      await enter(result.data.user, true);
+    } else {
+      mode(false);
+      say("ثبت‌نام انجام شد. ایمیل تأیید را باز کنید، سپس از همین صفحه وارد شوید.", true);
+    }
+  });
+
+  document.getElementById("tnxCheckApproval").addEventListener("click", async function(){
+    if (currentUser) await enter(currentUser, false);
+  });
+
+  async function logout(){
+    await db.auth.signOut();
+    location.reload();
+  }
+
+  document.getElementById("tnxLogoutPending").addEventListener("click", logout);
+
+  async function addAccountControls(){
+    const top = document.querySelector(".topbar");
+    if (!top || document.getElementById("tnxLogoutButton")) return;
+
+    const label = document.createElement("span");
+    label.textContent = currentUser.email;
+    label.style.cssText = "font-size:11px;color:var(--muted);max-width:210px;overflow:hidden";
+
+    const button = document.createElement("button");
+    button.id = "tnxLogoutButton";
+    button.className = "btn soft small";
+    button.textContent = "خروج";
+    button.addEventListener("click", logout);
+
+    top.append(label, button);
+  }
+
+  function fromRow(row){
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description || "",
+      type: row.project_type || "نقشه‌برداری",
+      city: row.city || "",
+      status: row.status || "active",
+      progress: Number(row.progress || 0),
+      latitude: row.latitude,
+      longitude: row.longitude,
+      geojson: row.geojson || null,
+      owner_id: row.owner_id
+    };
+  }
+
+  async function loadCloudProjects(){
+    let result = await db.from("projects")
+      .select("*")
+      .order("created_at", {ascending:false});
+
+    if (result.error) {
+      toast("دریافت پروژه‌ها ناموفق بود: " + result.error.message);
+      return;
+    }
+
+    let rows = result.data || [];
+    const localRows = readJSON(STORAGE_KEY, []);
+
+    if (!rows.length && localRows.length &&
+        confirm("پروژه‌های ذخیره‌شده در این مرورگر را به دیتابیس آنلاین منتقل کنیم؟")) {
+      const importRows = localRows.map(p => ({
+        name: p.name,
+        description: p.description || "",
+        city: p.city || "",
+        project_type: p.type || "نقشه‌برداری",
+        status: p.status || "active",
+        progress: Number(p.progress || 0),
+        latitude: p.latitude ?? null,
+        longitude: p.longitude ?? null,
+        geojson: p.geojson || null,
+        owner_id: currentUser.id
+      }));
+
+      const imported = await db.from("projects").insert(importRows);
+      if (imported.error) toast("انتقال پروژه‌های قبلی انجام نشد: " + imported.error.message);
+
+      result = await db.from("projects").select("*").order("created_at", {ascending:false});
+      rows = result.data || [];
+    }
+
+    projects = rows.map(fromRow);
+    refresh();
+    fillFileProjects();
+  }
+
+  function logCloud(action, type, id){
+    db.from("activity_logs").insert({
+      actor_id: currentUser.id,
+      action: action,
+      entity_type: type,
+      entity_id: id || null
+    });
+  }
+
+  const projectForm = document.getElementById("projectForm");
+
+  projectForm.addEventListener("submit", async function(event){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const latText = document.getElementById("latitude").value.trim();
+    const lngText = document.getElementById("longitude").value.trim();
+    let geometry = draftGeoJSON;
+
+    if (!geometry && drawings && drawings.getLayers().length) {
+      geometry = drawings.toGeoJSON();
+    }
+
+    let lat = latText === "" ? null : Number(latText);
+    let lng = lngText === "" ? null : Number(lngText);
+
+    if ((lat === null || lng === null) && geometry && geometry.features &&
+        geometry.features.length && window.L) {
+      try {
+        const bounds = L.geoJSON(geometry).getBounds();
+        if (bounds.isValid()) {
+          const center = bounds.getCenter();
+          lat = center.lat;
+          lng = center.lng;
+        }
+      } catch {}
+    }
+
+    const row = {
+      name: document.getElementById("projectName").value.trim(),
+      description: document.getElementById("projectDescription").value.trim(),
+      project_type: document.getElementById("projectType").value,
+      city: document.getElementById("projectCity").value.trim(),
+      status: document.getElementById("projectStatus").value,
+      progress: Number(document.getElementById("projectProgress").value),
+      latitude: lat,
+      longitude: lng,
+      geojson: geometry || null,
+      updated_at: new Date().toISOString()
+    };
+
+    let result;
+    if (editingId) {
+      result = await db.from("projects").update(row)
+        .eq("id", editingId).select("*").single();
+    } else {
+      result = await db.from("projects")
+        .insert({...row, owner_id:currentUser.id})
+        .select("*").single();
+    }
+
+    if (result.error) {
+      toast("ذخیره آنلاین انجام نشد: " + result.error.message);
+      return;
+    }
+
+    const action = editingId ? "ویرایش پروژه: " : "ثبت پروژه: ";
+    logCloud(action + row.name, "project", result.data.id);
+    closeProject();
+    if (drawings) drawings.clearLayers();
+    pickedPoint = null;
+    draftGeoJSON = null;
+    await loadCloudProjects();
+    toast("پروژه در دیتابیس آنلاین ذخیره شد.");
+  }, true);
+
+  window.deleteProject = async function(id){
+    const project = projects.find(p => p.id === id);
+    if (!project || !confirm("پروژه «" + project.name + "» حذف شود؟")) return;
+
+    const result = await db.from("projects").delete().eq("id", id);
+    if (result.error) {
+      toast("حذف انجام نشد: " + result.error.message);
+      return;
+    }
+
+    logCloud("حذف پروژه: " + project.name, "project", id);
+    await loadCloudProjects();
+    toast("پروژه از دیتابیس حذف شد.");
+  };
+
+  const originalRenderProjects = renderProjects;
+  renderProjects = function(){
+    originalRenderProjects();
+
+    document.querySelectorAll("#projectRows tr").forEach(function(tr){
+      const button = tr.querySelector("button[onclick*='editProject']");
+      if (!button) return;
+
+      const match = button.getAttribute("onclick").match(/editProject\('([^']+)'\)/);
+      const project = match && projects.find(p => p.id === match[1]);
+
+      if (project && project.owner_id !== currentUser?.id &&
+          currentProfile?.role !== "admin") {
+        tr.querySelectorAll("button").forEach(b => b.classList.add("hidden"));
+      }
+    });
+  };
+
+  function installCloudFiles(){
+    const section = document.getElementById("filesPage");
+    section.innerHTML = `
+      <div class="page-head">
+        <div><h1>فایل‌های مهندسی</h1><p>ذخیره در فضای ابری پروژه</p></div>
+      </div>
+      <div class="card" style="padding:15px;margin-bottom:14px">
+        <div class="row">
+          <div><label>پروژه</label><select id="tnxFileProject"></select></div>
+          <div><label>فایل‌ها (حداکثر ۵۰ مگابایت برای هر فایل)</label>
+            <input id="tnxFileInput" type="file" multiple accept=".pdf,.dwg,.dxf,.kml,.kmz,.shp,.zip,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.tif,.tiff">
+          </div>
+        </div>
+        <button class="btn" id="tnxUploadButton" style="margin-top:12px">⬆ بارگذاری فایل</button>
+        <span id="tnxFileMessage" style="font-size:12px"></span>
+      </div>
+      <div class="card"><div class="table-wrap">
+        <table><thead><tr><th>نام فایل</th><th>پروژه</th><th>حجم</th><th>عملیات</th></tr></thead>
+        <tbody id="tnxFileRows"></tbody></table>
+      </div></div>`;
+
+    document.getElementById("tnxUploadButton").addEventListener("click", uploadFiles);
+    document.getElementById("tnxFileProject").addEventListener("change", loadFiles);
+    const fileNav = document.querySelector('[data-page="filesPage"]');
+    if (fileNav) fileNav.addEventListener("click", function(){setTimeout(loadFiles,100)});
+  }
+
+  function fillFileProjects(){
+    const select = document.getElementById("tnxFileProject");
+    if (!select) return;
+
+    const oldValue = select.value;
+    select.innerHTML = `<option value="">همه پروژه‌ها</option>` +
+      projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+
+    if (oldValue) select.value = oldValue;
+    loadFiles();
+  }
+
+  async function loadFiles(){
+    const body = document.getElementById("tnxFileRows");
+    if (!body) return;
+
+    const result = await db.from("project_files")
+      .select("*")
+      .order("created_at", {ascending:false});
+
+    if (result.error) {
+      body.innerHTML = `<tr><td colspan="4" class="empty">${esc(result.error.message)}</td></tr>`;
+      return;
+    }
+
+    const selected = document.getElementById("tnxFileProject").value;
+    const files = (result.data || []).filter(f => !selected || f.project_id === selected);
+
+    body.innerHTML = files.map(f => {
+      const project = projects.find(p => p.id === f.project_id);
+      const path = String(f.file_path || "");
+      const safePath = path.replace(/\\/g,"").replace(/'/g,"");
+      const canDelete = currentProfile.role === "admin" || f.uploaded_by === currentUser.id;
+
+      return `<tr>
+        <td>${esc(f.file_name)}</td>
+        <td>${esc(project?.name || "—")}</td>
+        <td>${Math.max(1,Math.ceil(Number(f.file_size || 0)/1024)).toLocaleString("fa-IR")} KB</td>
+        <td>
+          <button class="btn soft small" onclick="window.tnxDownloadFile('${safePath}')">دانلود</button>
+          ${canDelete ? `<button class="btn red small" onclick="window.tnxDeleteFile('${esc(f.id)}','${safePath}')">حذف</button>` : ""}
+        </td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="4" class="empty">فایلی ثبت نشده است.</td></tr>`;
+  }
+
+  async function uploadFiles(){
+    const projectId = document.getElementById("tnxFileProject").value;
+    const input = document.getElementById("tnxFileInput");
+    const files = Array.from(input.files || []);
+    const out = document.getElementById("tnxFileMessage");
+
+    if (!projectId) { toast("ابتدا یک پروژه را انتخاب کنید."); return; }
+    if (!files.length) { toast("ابتدا فایل را انتخاب کنید."); return; }
+
+    let uploaded = 0;
+
+    for (const file of files) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast("فایل «" + file.name + "» از حد ۵۰ مگابایت بزرگ‌تر است.");
+        continue;
+      }
+
+      out.textContent = "در حال بارگذاری: " + file.name;
+
+      const extension = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g,"");
+      const random = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+      const path = projectId + "/" + currentUser.id + "/" + random + "." + extension;
+
+      const stored = await db.storage.from("project-files").upload(path, file, {
+        upsert: false,
+        contentType: file.type || "application/octet-stream"
+      });
+
+      if (stored.error) {
+        toast("بارگذاری ناموفق: " + stored.error.message);
+        continue;
+      }
+
+      const saved = await db.from("project_files").insert({
+        project_id: projectId,
+        file_name: file.name,
+        file_path: path,
+        file_type: extension,
+        file_size: file.size,
+        uploaded_by: currentUser.id
+      });
+
+      if (saved.error) {
+        await db.storage.from("project-files").remove([path]);
+        toast("ثبت اطلاعات فایل ناموفق بود: " + saved.error.message);
+        continue;
+      }
+
+      uploaded++;
+    }
+
+    input.value = "";
+    out.textContent = "";
+    await loadFiles();
+    toast(uploaded + " فایل در فضای ابری ذخیره شد.");
+  }
+
+  window.tnxDownloadFile = async function(path){
+    const result = await db.storage.from("project-files").createSignedUrl(path, 600);
+    if (result.error) { toast("دانلود ناموفق: " + result.error.message); return; }
+    window.open(result.data.signedUrl, "_blank", "noopener");
+  };
+
+  window.tnxDeleteFile = async function(id, path){
+    if (!confirm("این فایل حذف شود؟")) return;
+
+    const removed = await db.storage.from("project-files").remove([path]);
+    if (removed.error) { toast(removed.error.message); return; }
+
+    const result = await db.from("project_files").delete().eq("id", id);
+    if (result.error) { toast(result.error.message); return; }
+
+    await loadFiles();
+    toast("فایل حذف شد.");
+  };
+
+  function installAdminPage(){
+    if (currentProfile.role !== "admin") return;
+
+    const sidebar = document.getElementById("sidebar");
+    if (!document.getElementById("tnxUsersNav")) {
+      sidebar.insertAdjacentHTML("beforeend",
+        `<div class="nav-title">مدیریت</div>
+         <button class="nav" id="tnxUsersNav">👥 کاربران و ورودها <span id="tnxPendingBadge"></span></button>`);
+
+      document.getElementById("tnxUsersNav").addEventListener("click", showUsersPage);
+    }
+
+    if (!document.getElementById("tnxUsersPage")) {
+      const page = document.createElement("section");
+      page.id = "tnxUsersPage";
+      page.className = "page";
+      page.innerHTML = `
+        <div class="page-head"><div><h1>کاربران و ورودها</h1><p>تأیید عضویت و بررسی ورودهای ثبت‌شده</p></div>
+        <button class="btn soft" id="tnxReloadUsers">بروزرسانی</button></div>
+        <div class="card" style="margin-bottom:15px">
+          <div class="card-title">کاربران</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>دسترسی</th><th>عملیات</th></tr></thead>
+            <tbody id="tnxUserRows"></tbody>
+          </table></div>
+        </div>
+        <div class="card"><div class="card-title">آخرین ورودها</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>ایمیل</th><th>زمان</th><th>دستگاه/مرورگر</th></tr></thead>
+            <tbody id="tnxLoginRows"></tbody>
+          </table></div>
+        </div>`;
+
+      document.querySelector(".main main").appendChild(page);
+      document.getElementById("tnxReloadUsers").addEventListener("click", loadAdminData);
+    }
+  }
+
+  function showUsersPage(){
+    if (currentProfile?.role !== "admin") return;
+
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById("tnxUsersPage").classList.add("active");
+    document.querySelectorAll(".nav").forEach(n => n.classList.remove("active"));
+    document.getElementById("tnxUsersNav").classList.add("active");
+    document.getElementById("pageTitle").textContent = "کاربران و ورودها";
+    document.getElementById("sidebar").classList.remove("open");
+    loadAdminData();
+  }
+
+  async function loadAdminData(){
+    const result = await db.from("profiles")
+      .select("id,full_name,email,role,approved,created_at")
+      .order("created_at", {ascending:false});
+
+    const rows = document.getElementById("tnxUserRows");
+    if (result.error) {
+      rows.innerHTML = `<tr><td colspan="5" class="empty">${esc(result.error.message)}</td></tr>`;
+      return;
+    }
+
+    const roles = {
+      admin:"مدیر کل",
+      project_manager:"مدیر پروژه",
+      surveyor:"نقشه‌بردار",
+      supervisor:"ناظر",
+      client:"کارفرما"
+    };
+
+    rows.innerHTML = (result.data || []).map(u => {
+      const self = u.id === currentUser.id;
+      const roleOptions = Object.entries(roles).map(([key,label]) =>
+        `<option value="${key}" ${u.role===key?"selected":""}>${label}</option>`
+      ).join("");
+
+      return `<tr>
+        <td>${esc(u.full_name || "—")}</td>
+        <td>${esc(u.email || "—")}</td>
+        <td><select ${self?"disabled":""} onchange="window.tnxSetRole('${esc(u.id)}',this.value)">${roleOptions}</select></td>
+        <td>${u.approved ? "تأییدشده" : "در انتظار"}</td>
+        <td>${self ? "حساب مدیر" : u.approved
+          ? `<button class="btn red small" onclick="window.tnxSetApproval('${esc(u.id)}',false)">لغو دسترسی</button>`
+          : `<button class="btn small" onclick="window.tnxSetApproval('${esc(u.id)}',true)">تأیید کاربر</button>`}
+        </td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="5" class="empty">کاربری پیدا نشد.</td></tr>`;
+
+    const logins = await db.from("login_events")
+      .select("email,created_at,user_agent")
+      .order("created_at", {ascending:false})
+      .limit(30);
+
+    const loginRows = document.getElementById("tnxLoginRows");
+    if (logins.error) {
+      loginRows.innerHTML = `<tr><td colspan="3" class="empty">${esc(logins.error.message)}</td></tr>`;
+    } else {
+      loginRows.innerHTML = (logins.data || []).map(item => `
+        <tr><td>${esc(item.email || "—")}</td>
+        <td>${new Date(item.created_at).toLocaleString("fa-IR")}</td>
+        <td>${esc((item.user_agent || "—").slice(0,75))}</td></tr>
+      `).join("") || `<tr><td colspan="3" class="empty">ورودی ثبت نشده است.</td></tr>`;
+    }
+
+    await checkPendingUsers();
+  }
+
+  window.tnxSetApproval = async function(id, approved){
+    const result = await db.from("profiles").update({approved}).eq("id", id);
+    if (result.error) { toast("تغییر دسترسی ناموفق بود: " + result.error.message); return; }
+    toast(approved ? "کاربر تأیید شد." : "دسترسی کاربر لغو شد.");
+    await loadAdminData();
+  };
+
+  window.tnxSetRole = async function(id, role){
+    const result = await db.from("profiles").update({role}).eq("id", id);
+    if (result.error) { toast("تغییر نقش ناموفق بود: " + result.error.message); return; }
+    toast("نقش کاربر تغییر کرد.");
+  };
+
+  async function checkPendingUsers(){
+    if (currentProfile?.role !== "admin") return;
+
+    const result = await db.from("profiles")
+      .select("id", {count:"exact",head:true})
+      .eq("approved", false);
+
+    if (result.error) return;
+
+    const count = result.count || 0;
+    const badge = document.getElementById("tnxPendingBadge");
+
+    if (badge) badge.textContent = count ? " (" + count.toLocaleString("fa-IR") + " درخواست)" : "";
+
+    if (count > pendingCount && pendingCount >= 0) {
+      toast("درخواست عضویت جدید برای بررسی دارید.");
+    }
+    pendingCount = count;
+  }
+
+  async function init(){
+    const result = await db.auth.getSession();
+
+    if (result.error) {
+      say("بررسی ورود ناموفق بود: " + result.error.message);
+      return;
+    }
+
+    if (result.data.session) {
+      await enter(result.data.session.user, false);
+    }
+  }
+
+  init();
+})();
+</script>
 </body>
 </html>
