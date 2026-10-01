@@ -2470,5 +2470,113 @@ window.TNX_ADV_elev=async function(){var m=getMap();if(!m)return;var pts=[];getA
 window.TNX_ADV_fit=function(){var m=getMap();try{m.fitBounds(getAdvLayer().getBounds().pad(0.2));}catch(e){alert('نقطه‌ای نیست');}};
 })();
 </script>
+  <!-- TNX Draw + Print v2.5.0 -->
+<style>
+#tnxDrawBtn{position:fixed;left:18px;bottom:160px;z-index:5000;border:0;border-radius:12px;padding:10px 14px;background:linear-gradient(135deg,#0f766e,#148dff);color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 8px 25px rgba(0,0,0,.25)}
+#tnxDrawPanel{position:fixed;left:18px;bottom:207px;width:min(520px,calc(100vw - 36px));max-height:72vh;overflow:auto;z-index:10000;background:var(--card,#fff);color:var(--t,#15243a);border:1px solid var(--l,#e1e9f2);border-radius:16px;padding:14px;direction:rtl;font-family:Tahoma;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+#tnxDrawPanel.hide{display:none!important}
+#tnxDrawPanel h3{font-size:12px;margin:12px 0 6px;color:var(--p,#148dff)}
+#tnxDrawPanel input,#tnxDrawPanel select{width:100%;padding:8px;border:1px solid var(--l,#e1e9f2);border-radius:8px;margin:4px 0;font-size:12px;background:var(--c2,#f7faff);color:inherit}
+.tnx-d-row{display:flex;gap:6px;flex-wrap:wrap}
+.tnx-d-row button{flex:1;min-width:110px;border:0;border-radius:9px;padding:8px;font-size:12px;font-weight:bold;cursor:pointer;background:#eef4ff;color:#0f172a;border:1px solid #dbe5f0}
+.tnx-d-row button.on{background:#148dff!important;color:#fff!important}
+.tnx-d-row button.green{background:#16a34a;color:#fff}
+.tnx-d-row button.orange{background:#b45309;color:#fff}
+.tnx-d-row button.red{background:#e11d48;color:#fff}
+#tnxDrawLog{background:#071426;color:#bfffe7;border-radius:9px;padding:8px;font-size:11px;min-height:45px;max-height:110px;overflow:auto;direction:ltr;text-align:left;white-space:pre-wrap;margin-top:8px}
+#tnxPrintConfirm{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:11000;background:#071426;color:#fff;border:2px solid #ef4444;border-radius:12px;padding:10px 14px;display:none;gap:8px;align-items:center;font-size:12px}
+#tnxPrintHeader{display:none}
+@media print{
+.sidebar,.topbar,#tnxDrawBtn,#tnxDrawPanel,#tnxAdvBtn,#tnxAdvPanel,#tnxCadBtn,#tnxUpdateBtn,#tnxCadPanel,#tnxUpdatePanel,.map-tools,.map-search,.map-info,#tnxPrintConfirm{display:none!important}
+.main{margin:0!important}.page{padding:0!important}
+#tnxPrintHeader{display:block!important;direction:rtl;font-family:Tahoma;padding:10px;border-bottom:2px solid #000;margin-bottom:8px}
+}
+</style>
+
+<button id="tnxDrawBtn" type="button" onclick="document.getElementById('tnxDrawPanel').classList.toggle('hide')">✏️ ترسیم + چاپ</button>
+
+<div id="tnxDrawPanel" class="hide">
+<div style="display:flex;justify-content:space-between;align-items:center"><b>ترسیم، خروجی و چاپ مهندسی</b><button onclick="document.getElementById('tnxDrawPanel').classList.add('hide')" style="border:0;background:#eef2f7;border-radius:8px;padding:6px 10px;cursor:pointer">✕</button></div>
+
+<h3>📌 پین نقطه / 📏 مسیر / 📐 پلیگون</h3>
+<div class="tnx-d-row">
+<button id="tnxD_p" onclick="TNX_D_mode('point')">📌 پین نقطه</button>
+<button id="tnxD_l" onclick="TNX_D_mode('line')">📏 رسم مسیر</button>
+<button id="tnxD_g" onclick="TNX_D_mode('poly')">📐 رسم پلیگون</button>
+</div>
+<div class="tnx-d-row" style="margin-top:6px">
+<button class="green" onclick="TNX_D_finish()">✅ پایان ترسیم</button>
+<button class="red" onclick="TNX_D_clear()">🗑 پاک‌سازی کامل</button>
+</div>
+
+<h3>💾 خروجی‌ها + کپی</h3>
+<div class="tnx-d-row">
+<button class="green" onclick="TNX_D_dxf()">🏛️ DXF اتوکد</button>
+<button class="orange" onclick="TNX_D_scr()">📜 SCR</button>
+<button onclick="TNX_D_csv()">📊 CSV اکسل</button>
+</div>
+<div class="tnx-d-row" style="margin-top:6px">
+<button onclick="TNX_D_copyLast()">کپی مختصات آخر</button>
+<button onclick="TNX_D_copyAll()">کپی همه نقاط</button>
+</div>
+
+<h3>🖨️ پرینت Window / اسکیل + پرینت دستی</h3>
+<input id="tnxD_title" placeholder="عنوان نقشه چاپی" value="نقشه مهندسی TerraNexa">
+<div class="tnx-d-row">
+<select id="tnxD_scale" style="flex:1"><option value="fit">Fit to Paper</option><option value="500">1:500</option><option value="1000">1:1000</option><option value="2000">1:2000</option></select>
+<button onclick="TNX_D_printFull()">🖨️ پرینت دستی کل صفحه</button>
+</div>
+<div class="tnx-d-row" style="margin-top:6px">
+<button class="orange" onclick="TNX_D_startWindow()">✂️ انتخاب محدوده چاپ Window</button>
+<button class="red" onclick="TNX_D_cancelWindow()">انصراف Window</button>
+</div>
+
+<h3>✉️ ارسال ایمیل</h3>
+<div class="tnx-d-row">
+<input id="tnxD_email" placeholder="example@mail.com" style="flex:2">
+<input id="tnxD_esub" placeholder="موضوع" value="ارسال خروجی نقشه" style="flex:2">
+</div>
+<div class="tnx-d-row" style="margin-top:6px">
+<button class="green" onclick="TNX_D_email()">✉️ ارسال با ایمیل</button>
+</div>
+
+<div id="tnxDrawLog">Draw ready. اول نقشه هوشمند را باز کن.</div>
+</div>
+
+<div id="tnxPrintConfirm"><span>محدوده چاپ انتخاب شد.</span><button onclick="TNX_D_doWindowPrint()" style="background:#16a34a;color:#fff;border:0;border-radius:8px;padding:7px 12px;cursor:pointer">🖨️ تایید و پرینت</button></div>
+<div id="tnxPrintHeader"><b id="tnxPrintTitle">نقشه مهندسی</b><div id="tnxPrintMeta" style="font-size:12px"></div></div>
+
+<script>
+(function(){
+let mode=null, tmpPts=[], tmpLine=null, feats=[], layer=null, lastLL=null, selecting=false, sLL=null, rect=null, printBounds=null;
+function log(t){var e=document.getElementById('tnxDrawLog');if(e){e.textContent+="\n"+t;e.scrollTop=e.scrollHeight;}}
+function getMap(){try{if(typeof map!=='undefined'&&map&&map.flyTo)return map;}catch(e){}return null;}
+function ensureLayer(){var m=getMap();if(!m)return null;if(!layer||!m.hasLayer(layer)){layer=L.featureGroup().addTo(m);}return layer;}
+function wait(){var m=getMap();if(m&&m.on){m.on('click',onClick);m.on('mousedown',onDown);m.on('mousemove',onMove);m.on('mouseup',onUp);log('connected to map.');}else setTimeout(wait,700);}
+function setBtn(){['tnxD_p','tnxD_l','tnxD_g'].forEach(id=>document.getElementById(id)?.classList.remove('on'));if(mode==='point')document.getElementById('tnxD_p')?.classList.add('on');if(mode==='line')document.getElementById('tnxD_l')?.classList.add('on');if(mode==='poly')document.getElementById('tnxD_g')?.classList.add('on');}
+window.TNX_D_mode=function(m){if(!getMap()){alert('اول برو به نقشه هوشمند');return;}mode=(mode===m?null:m);tmpPts=[];if(tmpLine){getMap().removeLayer(tmpLine);tmpLine=null;}setBtn();log('mode: '+(mode||'off'));}
+function onClick(e){if(selecting)return;var m=getMap();if(!m||!mode)return;var ll=e.latlng;lastLL=ll;ensureLayer();
+if(mode==='point'){var mk=L.marker(ll).addTo(layer).bindPopup('Lat:'+ll.lat.toFixed(6)+'<br>Lng:'+ll.lng.toFixed(6));feats.push({t:'P',lat:ll.lat,lng:ll.lng});log('POINT '+ll.lat.toFixed(6)+','+ll.lng.toFixed(6));mode=null;setBtn();}
+else{tmpPts.push(ll);L.circleMarker(ll,{radius:4,color:mode==='line'?'#38bdf8':'#16a34a'}).addTo(layer);if(tmpLine)m.removeLayer(tmpLine);if(tmpPts.length>1){tmpLine=(mode==='line'?L.polyline(tmpPts,{color:'#38bdf8',weight:3}):L.polygon(tmpPts,{color:'#16a34a',fillOpacity:.25})).addTo(m);}}}
+window.TNX_D_finish=function(){var m=getMap();if(!tmpPts.length){alert('اول چند نقطه بزن');return;}ensureLayer();if(mode==='line'&&tmpPts.length>1){var d=0;for(var i=1;i<tmpPts.length;i++)d+=tmpPts[i-1].distanceTo(tmpPts[i]);var ln=L.polyline(tmpPts,{color:'#38bdf8',weight:4}).addTo(layer).bindTooltip((d>=1000?(d/1000).toFixed(3)+' km':d.toFixed(1)+' m'),{permanent:true,direction:'center'});feats.push({t:'L',pts:tmpPts.slice()});log('LINE len='+d.toFixed(1)+'m');}else if(mode==='poly'&&tmpPts.length>2){var pg=L.polygon(tmpPts,{color:'#16a34a',fillOpacity:.25}).addTo(layer);feats.push({t:'G',pts:tmpPts.slice()});log('POLY '+tmpPts.length+' pts');}else{alert('نقطه کافی نیست');return;}if(tmpLine){m.removeLayer(tmpLine);tmpLine=null;}tmpPts=[];mode=null;setBtn();};
+window.TNX_D_clear=function(){if(!confirm('همه ترسیمات این ابزار پاک شود؟'))return;if(layer)layer.clearLayers();feats=[];tmpPts=[];mode=null;setBtn();if(rect&&getMap()){getMap().removeLayer(rect);rect=null;}printBounds=null;document.getElementById('tnxPrintConfirm').style.display='none';log('cleared');};
+function utm(lat,lon){var a=6378137,f=1/298.257223563,k0=0.9996,e=Math.sqrt(2*f-f*f);var z=Math.floor((lon+180)/6)+1,lon0=(z-1)*6-180+3;var la=lat*Math.PI/180,lo=lon*Math.PI/180,lo0=lon0*Math.PI/180;var N=a/Math.sqrt(1-e*e*Math.sin(la)**2),T=Math.tan(la)**2,C=(e*e/(1-e*e))*Math.cos(la)**2,A=(lo-lo0)*Math.cos(la);var M=a*((1-e*e/4-3*e**4/64-5*e**6/256)*la-(3*e*e/8+3*e**4/32+45*e**6/1024)*Math.sin(2*la)+(15*e**4/256+45*e**6/1024)*Math.sin(4*la)-(35*e**6/3072)*Math.sin(6*la));var x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*(e*e/(1-e*e)))*A**5/120)+500000;var y=k0*(M+N*Math.tan(la)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*(e*e/(1-e*e)))*A**6/720));return{x,y,z};}
+function dl(n,c,t){var b=new Blob([c],{type:t});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();a.remove();}
+window.TNX_D_dxf=function(){if(!feats.length){alert('عارضه‌ای نیست');return;}var d='0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n0\nLAYER\n2\nGIS_P\n70\n0\n62\n1\n6\nCONTINUOUS\n0\nLAYER\n2\nGIS_L\n70\n0\n62\n5\n6\nCONTINUOUS\n0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n';feats.forEach((f,i)=>{if(f.t==='P'){var u=utm(f.lat,f.lng);d+='0\nPOINT\n8\nGIS_P\n10\n'+u.x+'\n20\n'+u.y+'\n30\n0\n0\nTEXT\n8\nGIS_P\n10\n'+(u.x+1)+'\n20\n'+(u.y+1)+'\n40\n2\n1\nP'+(i+1)+'\n';}if(f.t==='L'){for(var k=0;k<f.pts.length-1;k++){var a=utm(f.pts[k].lat,f.pts[k].lng),b=utm(f.pts[k+1].lat,f.pts[k+1].lng);d+='0\nLINE\n8\nGIS_L\n10\n'+a.x+'\n20\n'+a.y+'\n30\n0\n11\n'+b.x+'\n21\n'+b.y+'\n31\n0\n';}}if(f.t==='G'){d+='0\nLWPOLYLINE\n8\nGIS_L\n90\n'+f.pts.length+'\n70\n1\n';f.pts.forEach(p=>{var u2=utm(p.lat,p.lng);d+='10\n'+u2.x+'\n20\n'+u2.y+'\n';});}});d+='0\nENDSEC\n0\nEOF';dl('TerraNexa.dxf',d,'application/dxf');log('DXF ok');};
+window.TNX_D_scr=function(){if(!feats.length){alert('عارضه‌ای نیست');return;}var s='_UNITS 2 4 1 4 0 N\n';feats.forEach(f=>{if(f.t==='P'){var u=utm(f.lat,f.lng);s+='_POINT '+u.x+','+u.y+',0\n';}if(f.t==='L'){s+='_LINE ';f.pts.forEach(p=>{var u2=utm(p.lat,p.lng);s+=u2.x+','+u2.y+',0 ';});s+='\n\n';}if(f.t==='G'){s+='_PLINE ';f.pts.forEach(p=>{var u3=utm(p.lat,p.lng);s+=u3.x+','+u3.y+' ';});s+='C\n';}});s+='_ZOOM _E\n';dl('TerraNexa.scr',s,'text/plain');log('SCR ok');};
+window.TNX_D_csv=function(){var pts=feats.filter(f=>f.t==='P');if(!pts.length){alert('نقطه‌ای نیست');return;}var c='\uFEFFName,X_UTM,Y_UTM,Lat,Lng\n';pts.forEach((f,i)=>{var u=utm(f.lat,f.lng);c+='P'+(i+1)+','+u.x.toFixed(2)+','+u.y.toFixed(2)+','+f.lat.toFixed(6)+','+f.lng.toFixed(6)+'\n';});dl('TerraNexa.csv',c,'text/csv');log('CSV ok');};
+window.TNX_D_copyLast=async function(){if(!lastLL){alert('اول روی نقشه کلیک کن');return;}var u=utm(lastLL.lat,lastLL.lng);var t=u.x.toFixed(3)+','+u.y.toFixed(3)+',0';try{await navigator.clipboard.writeText(t);alert('کپی شد:\n'+t);}catch(e){prompt('کپی کن:',t);}};
+window.TNX_D_copyAll=function(){var pts=feats.filter(f=>f.t==='P');if(!pts.length){alert('نقطه‌ای نیست');return;}var t=pts.map((f,i)=>{var u=utm(f.lat,f.lng);return 'P'+(i+1)+': '+u.x.toFixed(2)+','+u.y.toFixed(2)+',0';}).join('\n');navigator.clipboard?.writeText(t);prompt('همه نقاط (کپی بگیر):',t);};
+window.TNX_D_printFull=function(){var ti=document.getElementById('tnxD_title').value||'نقشه مهندسی';var sc=document.getElementById('tnxD_scale').value;document.getElementById('tnxPrintTitle').textContent=ti;document.getElementById('tnxPrintMeta').textContent='مقیاس: '+(sc==='fit'?'Fit to Paper':'1:'+sc)+' | تاریخ: '+new Date().toLocaleString('fa-IR');setTimeout(()=>window.print(),300);};
+window.TNX_D_startWindow=function(){var m=getMap();if(!m){alert('اول نقشه هوشمند را باز کن');return;}selecting=true;sLL=null;if(rect){m.removeLayer(rect);rect=null;}m.dragging.disable();m.getContainer().style.cursor='crosshair';alert('روی نقشه درگ کن (بگیر و بکش) تا محدوده چاپ انتخاب شود.');};
+window.TNX_D_cancelWindow=function(){selecting=false;var m=getMap();if(m){m.dragging.enable();m.getContainer().style.cursor='';if(rect){m.removeLayer(rect);rect=null;}}printBounds=null;document.getElementById('tnxPrintConfirm').style.display='none';};
+function onDown(e){if(!selecting)return;sLL=e.latlng;if(rect)getMap().removeLayer(rect);rect=L.rectangle([sLL,sLL],{color:'#ef4444',weight:2,dashArray:'6,6'}).addTo(getMap());}
+function onMove(e){if(!selecting||!sLL||!rect)return;rect.setBounds(L.latLngBounds(sLL,e.latlng));}
+function onUp(e){if(!selecting||!sLL)return;printBounds=L.latLngBounds(sLL,e.latlng);selecting=false;var m=getMap();m.dragging.enable();m.getContainer().style.cursor='';document.getElementById('tnxPrintConfirm').style.display='flex';}
+window.TNX_D_doWindowPrint=function(){var m=getMap();if(!m||!printBounds){alert('محدوده انتخاب نشده');return;}document.getElementById('tnxPrintConfirm').style.display='none';var ti=document.getElementById('tnxD_title').value||'نقشه مهندسی';var sc=document.getElementById('tnxD_scale').value;document.getElementById('tnxPrintTitle').textContent=ti;document.getElementById('tnxPrintMeta').textContent='مقیاس: '+(sc==='fit'?'Fit':'1:'+sc)+' | '+printBounds.getSouthWest().lat.toFixed(5)+','+printBounds.getSouthWest().lng.toFixed(5)+' تا '+printBounds.getNorthEast().lat.toFixed(5)+','+printBounds.getNorthEast().lng.toFixed(5);m.fitBounds(printBounds.pad(0.05));setTimeout(()=>window.print(),600);};
+window.TNX_D_email=function(){var to=document.getElementById('tnxD_email').value;if(!to){alert('ایمیل مقصد را بنویس');return;}var sub=encodeURIComponent(document.getElementById('tnxD_esub').value||'خروجی نقشه');var pts=feats.filter(f=>f.t==='P').map((f,i)=>'P'+(i+1)+': '+f.lat.toFixed(6)+','+f.lng.toFixed(6)).join('\n');var body=encodeURIComponent('عنوان: '+(document.getElementById('tnxD_title').value||'')+'\nنقاط:\n'+(pts||'—')+'\nلینک سایت: '+location.href);window.location.href='mailto:'+to+'?subject='+sub+'&body='+body;};
+wait();
+})();
+</script>
  </body>
 </html>
