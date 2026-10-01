@@ -985,6 +985,993 @@ if (localStorage.getItem("tnx_theme") === "dark") document.body.classList.add("d
 // استارت بررسی احراز هویت هنگام باز شدن سایت
 checkAuthSession();
 </script>
+<!-- =========================================================
+ TerraNexa GIS Engineering Tools + Update Center
+ Version 2.1.0
+========================================================= -->
 
+<style>
+#tnxCadBtn,#tnxUpdateBtn{
+  position:fixed;
+  left:18px;
+  z-index:5000;
+  border:0;
+  border-radius:12px;
+  padding:10px 14px;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 8px 25px rgba(0,0,0,.22);
+}
+#tnxCadBtn{
+  bottom:20px;
+  background:linear-gradient(135deg,#0f172a,#148dff);
+}
+#tnxUpdateBtn{
+  bottom:67px;
+  background:linear-gradient(135deg,#0f766e,#15d1ba);
+}
+.tnx-panel{
+  position:fixed;
+  left:18px;
+  bottom:115px;
+  width:min(480px,calc(100vw - 36px));
+  max-height:76vh;
+  overflow:auto;
+  z-index:10000;
+  background:var(--card,#fff);
+  color:var(--t,#15243a);
+  border:1px solid var(--l,#e1e9f2);
+  border-radius:18px;
+  padding:17px;
+  box-shadow:0 20px 60px rgba(0,0,0,.3);
+  direction:rtl;
+}
+.tnx-panel.hide{display:none!important}
+.tnx-panel-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.tnx-panel-head h3{margin:0}
+.tnx-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.tnx-value{
+  background:var(--c2,#f7faff);
+  border:1px solid var(--l,#e1e9f2);
+  padding:9px;
+  border-radius:10px;
+  font-size:12px;
+  line-height:1.8;
+}
+.tnx-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:10px 0;
+}
+#tnxCadLog{
+  background:#071426;
+  color:#bfffe7;
+  border-radius:11px;
+  padding:10px;
+  min-height:65px;
+  max-height:150px;
+  overflow:auto;
+  direction:ltr;
+  text-align:left;
+  white-space:pre-wrap;
+  font-family:Consolas,monospace;
+  font-size:11px;
+}
+.tnx-version{
+  display:inline-block;
+  background:#e8f2ff;
+  color:#126ac4;
+  padding:4px 8px;
+  border-radius:20px;
+  font-size:11px;
+}
+@media(max-width:700px){
+  .tnx-grid{grid-template-columns:1fr}
+  #tnxCadBtn,#tnxUpdateBtn{left:10px}
+  .tnx-panel{left:10px;width:calc(100vw - 20px)}
+}
+</style>
+
+<button id="tnxUpdateBtn" type="button" onclick="TNX_toggleUpdate()">↻ بروزرسانی</button>
+<button id="tnxCadBtn" type="button" onclick="TNX_toggleCad()">📐 CAD / XYZ</button>
+
+<div id="tnxCadPanel" class="tnx-panel hide">
+  <div class="tnx-panel-head">
+    <div>
+      <h3>ابزار مهندسی TerraNexa</h3>
+      <small>مختصات، UTM، اندازه‌گیری و خروجی برداشت</small>
+    </div>
+    <button class="btn soft sm" type="button" onclick="TNX_toggleCad()">✕</button>
+  </div>
+
+  <div class="tnx-grid">
+    <div class="tnx-value">
+      <b>مختصات جغرافیایی</b><br>
+      Lat (Y): <span id="tnxLat">—</span><br>
+      Lon (X): <span id="tnxLon">—</span>
+    </div>
+
+    <div class="tnx-value">
+      <b>ارتفاع</b><br>
+      Z: <span id="tnxZView">0.000</span> m
+      <input id="tnxZInput"
+             type="number"
+             step="0.001"
+             value="0"
+             style="margin-top:5px"
+             onchange="TNX_changeZ(this.value)">
+    </div>
+
+    <div class="tnx-value">
+      <b>UTM تقریبی</b><br>
+      Zone: <span id="tnxZone">—</span><br>
+      E (X): <span id="tnxE">—</span> m<br>
+      N (Y): <span id="tnxN">—</span> m
+    </div>
+
+    <div class="tnx-value">
+      <b>وضعیت برداشت</b><br>
+      نقاط ذخیره‌شده: <span id="tnxPointCount">۰</span><br>
+      واحد: متر / کیلومتر
+    </div>
+  </div>
+
+  <div class="tnx-toolbar">
+    <button class="btn sm" type="button" onclick="TNX_addPoint()">＋ ثبت نقطه</button>
+    <button class="btn soft sm" type="button" onclick="TNX_copyXYZ()">کپی X,Y,Z</button>
+    <button class="btn soft sm" type="button" onclick="TNX_distanceMode()">📏 فاصله</button>
+    <button class="btn soft sm" type="button" onclick="TNX_areaMode()">📐 مساحت</button>
+    <button class="btn soft sm" type="button" onclick="TNX_exportCSV()">CSV</button>
+    <button class="btn soft sm" type="button" onclick="TNX_exportGeoJSON()">GeoJSON</button>
+    <button class="btn red sm" type="button" onclick="TNX_clearSurvey()">پاک‌کردن</button>
+  </div>
+
+  <div id="tnxCadLog">CAD/Survey tools ready.
+روی نقشه کلیک کنید.</div>
+</div>
+
+<div id="tnxUpdatePanel" class="tnx-panel hide">
+  <div class="tnx-panel-head">
+    <div>
+      <h3>مرکز بروزرسانی TerraNexa</h3>
+      <span class="tnx-version">نسخه 2.1.0</span>
+    </div>
+    <button class="btn soft sm" type="button" onclick="TNX_toggleUpdate()">✕</button>
+  </div>
+
+  <div class="tnx-value" style="margin-bottom:10px">
+    <b>نسخه فعلی سایت:</b> 2.1.0<br>
+    <span id="tnxUpdateStatus">برای بررسی نسخه جدید، دکمه زیر را بزنید.</span>
+  </div>
+
+  <div class="tnx-toolbar">
+    <button class="btn" type="button" onclick="TNX_checkUpdate()">🔍 بررسی بروزرسانی</button>
+    <button class="btn soft" type="button" onclick="TNX_forceUpdate()">↻ دریافت آخرین نسخه</button>
+  </div>
+
+  <small style="color:var(--m,#6c7e95);line-height:1.8">
+    «دریافت آخرین نسخه» فایل‌های شخصی یا اطلاعات Supabase را حذف نمی‌کند؛
+    فقط نسخه تازه صفحه سایت را از GitHub دریافت می‌کند.
+  </small>
+</div>
+
+<script>
+(function(){
+
+/* ================================
+   TerraNexa Engineering Extension
+================================ */
+
+const TNX_VERSION = "2.1.0";
+
+let TNX_lastPoint = null;
+let TNX_z = 0;
+let TNX_points = [];
+let TNX_surveyLayer = null;
+let TNX_distancePoints = [];
+let TNX_areaPoints = [];
+let TNX_mode = "point";
+
+function TNX_log(text){
+  const el = document.getElementById("tnxCadLog");
+  if(!el) return;
+  el.textContent += "\n" + text;
+  el.scrollTop = el.scrollHeight;
+}
+
+window.TNX_toggleCad = function(){
+  document.getElementById("tnxCadPanel").classList.toggle("hide");
+};
+
+window.TNX_toggleUpdate = function(){
+  document.getElementById("tnxUpdatePanel").classList.toggle("hide");
+};
+
+function TNX_waitForMap(){
+  if(typeof map !== "undefined" && map){
+
+    if(!TNX_surveyLayer){
+      TNX_surveyLayer = L.featureGroup().addTo(map);
+    }
+
+    /*
+      توجه:
+      این listener مستقل از listener اصلی TerraNexa است.
+      بنابراین ابزارهای قبلی نقشه حذف نمی‌شوند.
+    */
+    map.on("click",TNX_mapClick);
+
+    TNX_log("Map connected.");
+    return;
+  }
+
+  setTimeout(TNX_waitForMap,500);
+}
+
+function TNX_mapClick(e){
+
+  TNX_lastPoint = {
+    lat:Number(e.latlng.lat.toFixed(8)),
+    lon:Number(e.latlng.lng.toFixed(8)),
+    z:Number(TNX_z)
+  };
+
+  TNX_updateCoordinatePanel();
+
+  if(TNX_mode === "distance"){
+    TNX_addDistanceVertex(TNX_lastPoint);
+  }
+
+  if(TNX_mode === "area"){
+    TNX_addAreaVertex(TNX_lastPoint);
+  }
+}
+
+function TNX_updateCoordinatePanel(){
+
+  if(!TNX_lastPoint) return;
+
+  document.getElementById("tnxLat").textContent =
+    TNX_lastPoint.lat.toFixed(8);
+
+  document.getElementById("tnxLon").textContent =
+    TNX_lastPoint.lon.toFixed(8);
+
+  document.getElementById("tnxZView").textContent =
+    Number(TNX_lastPoint.z).toFixed(3);
+
+  const utm = TNX_latLonToUTM(
+    TNX_lastPoint.lat,
+    TNX_lastPoint.lon
+  );
+
+  document.getElementById("tnxZone").textContent =
+    utm.zone + (utm.north ? "N" : "S");
+
+  document.getElementById("tnxE").textContent =
+    utm.easting.toFixed(3);
+
+  document.getElementById("tnxN").textContent =
+    utm.northing.toFixed(3);
+}
+
+window.TNX_changeZ = function(value){
+
+  TNX_z = Number(value || 0);
+
+  if(TNX_lastPoint){
+    TNX_lastPoint.z = TNX_z;
+    TNX_updateCoordinatePanel();
+  }
+};
+
+window.TNX_addPoint = function(){
+
+  if(!TNX_lastPoint){
+    alert("ابتدا روی نقشه کلیک کنید.");
+    return;
+  }
+
+  const p = {
+    id:TNX_points.length + 1,
+    lat:TNX_lastPoint.lat,
+    lon:TNX_lastPoint.lon,
+    z:TNX_lastPoint.z
+  };
+
+  TNX_points.push(p);
+
+  L.circleMarker(
+    [p.lat,p.lon],
+    {
+      radius:6,
+      color:"#ffffff",
+      weight:2,
+      fillColor:"#148dff",
+      fillOpacity:1
+    }
+  )
+  .bindTooltip(
+    "P" + p.id +
+    "<br>X: " + p.lon +
+    "<br>Y: " + p.lat +
+    "<br>Z: " + p.z,
+    {direction:"top"}
+  )
+  .addTo(TNX_surveyLayer);
+
+  document.getElementById("tnxPointCount").textContent =
+    Number(TNX_points.length).toLocaleString("fa-IR");
+
+  TNX_log(
+    "POINT P" + p.id +
+    " X=" + p.lon +
+    " Y=" + p.lat +
+    " Z=" + p.z
+  );
+};
+
+window.TNX_copyXYZ = async function(){
+
+  if(!TNX_lastPoint){
+    alert("ابتدا روی نقشه کلیک کنید.");
+    return;
+  }
+
+  const utm = TNX_latLonToUTM(
+    TNX_lastPoint.lat,
+    TNX_lastPoint.lon
+  );
+
+  /*
+    برای کار مهندسی، X/Y را UTM درنظر می‌گیریم.
+  */
+  const text =
+    utm.easting.toFixed(3) + "," +
+    utm.northing.toFixed(3) + "," +
+    Number(TNX_lastPoint.z).toFixed(3);
+
+  try{
+    await navigator.clipboard.writeText(text);
+    alert("X,Y,Z کپی شد:\n" + text);
+  }catch(e){
+    prompt("مختصات را کپی کنید:",text);
+  }
+};
+
+/* ================================
+   اندازه‌گیری فاصله
+================================ */
+
+window.TNX_distanceMode = function(){
+
+  TNX_mode = "distance";
+  TNX_distancePoints = [];
+
+  TNX_log(
+    "DIST mode: دو نقطه روی نقشه انتخاب کنید."
+  );
+
+  alert(
+    "حالت اندازه‌گیری فاصله فعال شد.\nدو نقطه روی نقشه کلیک کنید."
+  );
+};
+
+function TNX_addDistanceVertex(p){
+
+  TNX_distancePoints.push(p);
+
+  L.circleMarker(
+    [p.lat,p.lon],
+    {
+      radius:5,
+      color:"#f59e0b",
+      fillColor:"#f59e0b",
+      fillOpacity:1
+    }
+  ).addTo(TNX_surveyLayer);
+
+  if(TNX_distancePoints.length === 2){
+
+    const a = TNX_distancePoints[0];
+    const b = TNX_distancePoints[1];
+
+    const d =
+      L.latLng(a.lat,a.lon)
+       .distanceTo(
+         L.latLng(b.lat,b.lon)
+       );
+
+    const line =
+      L.polyline(
+        [
+          [a.lat,a.lon],
+          [b.lat,b.lon]
+        ],
+        {
+          color:"#f59e0b",
+          weight:4
+        }
+      )
+      .bindTooltip(
+        d >= 1000
+        ? (d/1000).toFixed(3) + " km"
+        : d.toFixed(3) + " m",
+        {
+          permanent:true,
+          direction:"center"
+        }
+      )
+      .addTo(TNX_surveyLayer);
+
+    TNX_log(
+      "DIST = " +
+      (
+        d >= 1000
+        ? (d/1000).toFixed(3) + " km"
+        : d.toFixed(3) + " m"
+      )
+    );
+
+    TNX_mode = "point";
+    TNX_distancePoints = [];
+  }
+}
+
+/* ================================
+   محاسبه مساحت
+================================ */
+
+window.TNX_areaMode = function(){
+
+  TNX_mode = "area";
+  TNX_areaPoints = [];
+
+  TNX_log(
+    "AREA mode: نقاط پلیگون را کلیک کنید. برای پایان دوباره دکمه مساحت را بزنید."
+  );
+
+  alert(
+    "حالت مساحت فعال شد.\nحداقل ۳ نقطه روی نقشه بزنید، سپس دوباره دکمه «مساحت» را بزنید."
+  );
+
+  /*
+    بار دوم دکمه، پلیگون را می‌بندد.
+  */
+  window.TNX_areaMode = TNX_finishArea;
+};
+
+function TNX_addAreaVertex(p){
+
+  TNX_areaPoints.push(p);
+
+  L.circleMarker(
+    [p.lat,p.lon],
+    {
+      radius:4,
+      color:"#15d1ba",
+      fillColor:"#15d1ba",
+      fillOpacity:1
+    }
+  ).addTo(TNX_surveyLayer);
+
+  if(TNX_areaPoints.length > 1){
+
+    const arr =
+      TNX_areaPoints.map(
+        x => [x.lat,x.lon]
+      );
+
+    L.polyline(
+      arr,
+      {
+        color:"#15d1ba",
+        dashArray:"5,5"
+      }
+    )
+    .addTo(TNX_surveyLayer);
+  }
+}
+
+function TNX_finishArea(){
+
+  if(TNX_areaPoints.length < 3){
+    alert("حداقل سه نقطه لازم است.");
+    return;
+  }
+
+  const latlngs =
+    TNX_areaPoints.map(
+      p => L.latLng(p.lat,p.lon)
+    );
+
+  const polygon =
+    L.polygon(
+      latlngs,
+      {
+        color:"#15d1ba",
+        weight:3,
+        fillOpacity:.15
+      }
+    )
+    .addTo(TNX_surveyLayer);
+
+  /*
+    محاسبه ژئودزیک تقریبی Leaflet.draw
+  */
+  let area = 0;
+
+  if(
+    L.GeometryUtil &&
+    L.GeometryUtil.geodesicArea
+  ){
+    area =
+      L.GeometryUtil.geodesicArea(
+        latlngs
+      );
+  }
+
+  let result;
+
+  if(area >= 1000000){
+    result =
+      (area/1000000).toFixed(4)
+      + " km²";
+  }
+  else if(area >= 10000){
+    result =
+      (area/10000).toFixed(4)
+      + " ha";
+  }
+  else{
+    result =
+      area.toFixed(3)
+      + " m²";
+  }
+
+  polygon
+    .bindTooltip(
+      result,
+      {
+        permanent:true,
+        direction:"center"
+      }
+    );
+
+  TNX_log(
+    "AREA = " + result
+  );
+
+  TNX_areaPoints = [];
+  TNX_mode = "point";
+
+  /*
+    دکمه را به رفتار اولیه برمی‌گردانیم.
+  */
+  window.TNX_areaMode =
+    function(){
+
+      TNX_mode = "area";
+      TNX_areaPoints = [];
+
+      TNX_log(
+        "AREA mode started."
+      );
+
+      alert(
+        "حداقل ۳ نقطه روی نقشه بزنید و دوباره «مساحت» را انتخاب کنید."
+      );
+
+      window.TNX_areaMode =
+        TNX_finishArea;
+    };
+}
+
+/* ================================
+   خروجی CSV
+================================ */
+
+window.TNX_exportCSV = function(){
+
+  if(!TNX_points.length){
+    alert("نقطه‌ای ثبت نشده است.");
+    return;
+  }
+
+  let csv =
+    "Point,X_UTM,Y_UTM,Z,Latitude,Longitude,Zone\n";
+
+  TNX_points.forEach(p=>{
+
+    const u =
+      TNX_latLonToUTM(
+        p.lat,p.lon
+      );
+
+    csv +=
+      "P" + p.id + "," +
+      u.easting.toFixed(3) + "," +
+      u.northing.toFixed(3) + "," +
+      Number(p.z).toFixed(3) + "," +
+      p.lat.toFixed(8) + "," +
+      p.lon.toFixed(8) + "," +
+      u.zone + (u.north?"N":"S") +
+      "\n";
+  });
+
+  TNX_downloadText(
+    "terranexa-survey.csv",
+    csv,
+    "text/csv;charset=utf-8"
+  );
+};
+
+/* ================================
+   خروجی GeoJSON
+================================ */
+
+window.TNX_exportGeoJSON = function(){
+
+  if(!TNX_points.length){
+    alert("نقطه‌ای ثبت نشده است.");
+    return;
+  }
+
+  const json = {
+    type:"FeatureCollection",
+    features:
+      TNX_points.map(
+        p=>({
+          type:"Feature",
+          geometry:{
+            type:"Point",
+            coordinates:[
+              p.lon,
+              p.lat,
+              p.z
+            ]
+          },
+          properties:{
+            point:"P"+p.id
+          }
+        })
+      )
+  };
+
+  TNX_downloadText(
+    "terranexa-survey.geojson",
+    JSON.stringify(json,null,2),
+    "application/geo+json"
+  );
+};
+
+function TNX_downloadText(
+  filename,
+  text,
+  type
+){
+
+  const blob =
+    new Blob(
+      [text],
+      {type:type}
+    );
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+  a.download = filename;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  URL.revokeObjectURL(url);
+}
+
+window.TNX_clearSurvey = function(){
+
+  if(
+    !confirm(
+      "تمام نقاط و اندازه‌گیری‌های این جلسه پاک شوند؟"
+    )
+  ) return;
+
+  TNX_surveyLayer.clearLayers();
+
+  TNX_points = [];
+  TNX_distancePoints = [];
+  TNX_areaPoints = [];
+
+  document.getElementById(
+    "tnxPointCount"
+  ).textContent = "۰";
+
+  TNX_log(
+    "Survey layer cleared."
+  );
+};
+
+/* ================================
+   Lat/Lon -> UTM
+   WGS84
+================================ */
+
+function TNX_latLonToUTM(lat,lon){
+
+  const a =
+    6378137.0;
+
+  const eccSquared =
+    0.00669438;
+
+  const k0 =
+    0.9996;
+
+  const zone =
+    Math.floor(
+      (lon + 180) / 6
+    ) + 1;
+
+  const longOrigin =
+    (zone - 1) * 6
+    - 180 + 3;
+
+  const latRad =
+    lat * Math.PI / 180;
+
+  const lonRad =
+    lon * Math.PI / 180;
+
+  const originRad =
+    longOrigin * Math.PI / 180;
+
+  const eccPrimeSquared =
+    eccSquared /
+    (1 - eccSquared);
+
+  const N =
+    a /
+    Math.sqrt(
+      1 -
+      eccSquared *
+      Math.sin(latRad) *
+      Math.sin(latRad)
+    );
+
+  const T =
+    Math.tan(latRad) *
+    Math.tan(latRad);
+
+  const C =
+    eccPrimeSquared *
+    Math.cos(latRad) *
+    Math.cos(latRad);
+
+  const A =
+    Math.cos(latRad) *
+    (lonRad-originRad);
+
+  const M =
+    a *
+    (
+      (1 -
+       eccSquared/4 -
+       3*eccSquared*eccSquared/64 -
+       5*eccSquared*eccSquared*eccSquared/256)
+       * latRad
+
+      -
+
+      (3*eccSquared/8 +
+       3*eccSquared*eccSquared/32 +
+       45*eccSquared*eccSquared*eccSquared/1024)
+       * Math.sin(2*latRad)
+
+      +
+
+      (15*eccSquared*eccSquared/256 +
+       45*eccSquared*eccSquared*eccSquared/1024)
+       * Math.sin(4*latRad)
+
+      -
+
+      (35*eccSquared*eccSquared*eccSquared/3072)
+       * Math.sin(6*latRad)
+    );
+
+  let easting =
+    k0*N*
+    (
+      A +
+      (1-T+C)*Math.pow(A,3)/6 +
+      (5-18*T+T*T+72*C-58*eccPrimeSquared)
+      * Math.pow(A,5)/120
+    )
+    + 500000.0;
+
+  let northing =
+    k0 *
+    (
+      M +
+      N*Math.tan(latRad)*
+      (
+        A*A/2 +
+        (5-T+9*C+4*C*C)
+        * Math.pow(A,4)/24 +
+
+        (61-58*T+T*T+600*C-330*eccPrimeSquared)
+        * Math.pow(A,6)/720
+      )
+    );
+
+  const north =
+    lat >= 0;
+
+  if(!north){
+    northing += 10000000.0;
+  }
+
+  return{
+    zone,
+    north,
+    easting,
+    northing
+  };
+}
+
+/* ================================
+   Update Center
+================================ */
+
+window.TNX_checkUpdate =
+async function(){
+
+  const status =
+    document.getElementById(
+      "tnxUpdateStatus"
+    );
+
+  status.textContent =
+    "در حال بررسی GitHub...";
+
+  try{
+
+    /*
+      فایل اصلی را بدون cache درخواست می‌کنیم.
+      نسخه منتشرشده GitHub با نسخه جاری مقایسه می‌شود.
+    */
+
+    const url =
+      location.pathname +
+      "?tnx_check=" +
+      Date.now();
+
+    const res =
+      await fetch(
+        url,
+        {
+          cache:"no-store"
+        }
+      );
+
+    const html =
+      await res.text();
+
+    const match =
+      html.match(
+        /const TNX_VERSION\s*=\s*["']([^"']+)["']/
+      );
+
+    const remote =
+      match
+      ? match[1]
+      : TNX_VERSION;
+
+    if(remote !== TNX_VERSION){
+
+      status.innerHTML =
+        "نسخه جدید موجود است: <b>"
+        + remote +
+        "</b> — نسخه فعلی: "
+        + TNX_VERSION;
+
+    }else{
+
+      status.innerHTML =
+        "✅ سایت شما بروز است. نسخه "
+        + TNX_VERSION;
+    }
+
+  }catch(e){
+
+    status.textContent =
+      "بررسی بروزرسانی انجام نشد. اتصال اینترنت را بررسی کنید.";
+  }
+};
+
+window.TNX_forceUpdate =
+async function(){
+
+  const ok =
+    confirm(
+      "آخرین نسخه سایت از GitHub دریافت شود؟"
+    );
+
+  if(!ok) return;
+
+  /*
+    service worker قدیمی را نیز در صورت وجود پاک می‌کنیم.
+  */
+
+  try{
+
+    if(
+      "serviceWorker"
+      in navigator
+    ){
+
+      const regs =
+        await navigator
+        .serviceWorker
+        .getRegistrations();
+
+      for(
+        const reg
+        of regs
+      ){
+        await reg.unregister();
+      }
+    }
+
+    if(
+      "caches"
+      in window
+    ){
+
+      const keys =
+        await caches.keys();
+
+      await Promise.all(
+        keys.map(
+          k => caches.delete(k)
+        )
+      );
+    }
+
+  }catch(e){}
+
+  const clean =
+    location.href
+      .split("?")[0]
+      .split("#")[0];
+
+  location.replace(
+    clean +
+    "?update=" +
+    Date.now()
+  );
+};
+
+TNX_waitForMap();
+
+})();
+</script>
 </body>
 </html>
