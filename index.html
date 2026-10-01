@@ -2411,5 +2411,1238 @@ using (bucket_id = 'project-files');
   });
 })();
 </script>
+  <!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سامانه پیشرفته نقشه‌برداری، GIS و اتوکد تخصصی (نسخه کامل)</title>
+
+  <!-- کتابخانه‌های نقشه و پردازش فایل KMZ / KML -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; font-family: Tahoma, Segoe UI, sans-serif; direction: rtl; overflow: hidden; background: #0f172a; }
+
+    #app-container { display: flex; flex-direction: column; width: 100vw; height: 100vh; }
+
+    /* منوی فوقانی */
+    #top-app-menu {
+      background: #1e293b; color: #cbd5e1; font-size: 11px; display: flex; gap: 5px;
+      padding: 2px 10px; border-bottom: 1px solid #334155; z-index: 2000;
+    }
+    .menu-dropdown { position: relative; display: inline-block; }
+    .menu-btn { cursor: pointer; padding: 4px 8px; border-radius: 3px; color: #cbd5e1; }
+    .menu-btn:hover { background: #0284c7; color: #fff; }
+    .dropdown-content {
+      display: none; position: absolute; right: 0; top: 100%; background-color: #0f172a;
+      min-width: 190px; box-shadow: 0px 8px 16px rgba(0,0,0,0.6); border: 1px solid #334155;
+      z-index: 2001; border-radius: 4px;
+    }
+    .dropdown-content a { color: #e2e8f0; padding: 6px 12px; text-decoration: none; display: block; font-size: 10px; }
+    .dropdown-content a:hover { background-color: #0284c7; color: #fff; }
+    .menu-dropdown:hover .dropdown-content { display: block; }
+
+    /* نوار ابزار اصلی */
+    #icon-toolbar {
+      background: #0f172a; border-bottom: 1px solid #334155; padding: 5px 15px;
+      display: flex; gap: 6px; align-items: center; z-index: 1002; flex-wrap: wrap;
+    }
+    .tool-icon-btn {
+      background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 4px;
+      padding: 4px 8px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;
+    }
+    .tool-icon-btn:hover { background: #0284c7; border-color: #38bdf8; }
+
+    /* نوار دسته‌بندی سریع Google Maps */
+    #google-categories-bar {
+      position: absolute; top: 10px; right: 60px; z-index: 1001;
+      display: flex; gap: 6px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);
+      padding: 4px 8px; border-radius: 20px; border: 1px solid #334155; overflow-x: auto; max-width: 50%;
+    }
+    .cat-chip {
+      background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+      padding: 3px 10px; border-radius: 12px; font-size: 10px; cursor: pointer; white-space: nowrap;
+    }
+    .cat-chip:hover { background: #0284c7; color: #fff; }
+
+    #main-layout { display: flex; flex: 1; height: calc(100vh - 65px); position: relative; }
+
+    /* پنل کناری */
+    #sidebar {
+      width: 380px; height: 100%; background: #0f172a; color: #f8fafc;
+      padding: 12px; overflow-y: auto; z-index: 1000; box-shadow: -2px 0 12px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; gap: 12px; transition: margin-right 0.3s ease;
+    }
+    #sidebar.collapsed { margin-right: -380px; }
+
+    h3 { font-size: 11px; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px; }
+
+    .btn-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .btn {
+      background: #1e293b; color: #fff; border: 1px solid #334155; padding: 6px 8px;
+      border-radius: 4px; cursor: pointer; font-size: 10px; flex: 1 1 45%; text-align: center;
+    }
+    .btn:hover { background: #0284c7; border-color: #38bdf8; }
+    .btn-active { background: #0284c7 !important; border-color: #38bdf8 !important; font-weight: bold; }
+    .btn-danger { background: #7f1d1d; border-color: #991b1b; }
+    .btn-success { background: #14532d; border-color: #15803d; }
+    .btn-warning { background: #854d0e; border-color: #a16207; }
+
+    .search-section { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; position: relative; }
+    .search-input-group { display: flex; gap: 5px; position: relative; }
+    .search-input-group input { flex: 1; padding: 6px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 4px; font-size: 11px; }
+
+    #search-suggestions {
+      position: absolute; top: 100%; left: 0; right: 0; background: #0f172a;
+      border: 1px solid #38bdf8; border-radius: 4px; max-height: 180px; overflow-y: auto;
+      z-index: 2000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    }
+    .suggestion-item { padding: 6px 10px; font-size: 10px; cursor: pointer; border-bottom: 1px solid #1e293b; color: #e2e8f0; }
+    .suggestion-item:hover { background: #0284c7; color: #fff; }
+
+    .coord-form { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .coord-row { display: flex; gap: 5px; align-items: center; }
+    .coord-row input, .coord-row select, .coord-row textarea { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 4px 6px; border-radius: 4px; font-size: 10px; flex: 1; }
+
+    .info-card { background: #1e293b; padding: 8px; border-radius: 6px; font-size: 10px; line-height: 1.7; border: 1px solid #334155; }
+    .info-card span { color: #38bdf8; font-weight: bold; }
+
+    .table-container { max-height: 160px; overflow-y: auto; background: #1e293b; border-radius: 6px; border: 1px solid #334155; }
+    table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: center; }
+    th, td { padding: 4px; border-bottom: 1px solid #334155; }
+    th { background: #0f172a; color: #38bdf8; position: sticky; top: 0; }
+    .action-btn { cursor: pointer; color: #ef4444; font-weight: bold; }
+
+    #map-container { flex: 1; height: 100%; position: relative; background: #000; perspective: 1000px; overflow: hidden; }
+    #map { width: 100%; height: 100%; transition: transform 0.1s linear; transform-origin: center center; }
+
+    #map.draw-mode-active { cursor: crosshair !important; }
+    #map.window-select-active { cursor: cell !important; }
+    #map.calibrate-mode-active { cursor: target !important; }
+
+    /* نوار کنترل تاریخ */
+    #date-picker-bar {
+      position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+      z-index: 1001; background: rgba(15, 23, 42, 0.95); color: #fff;
+      padding: 6px 14px; border-radius: 20px; border: 1px solid #38bdf8;
+      font-size: 10px; display: flex; gap: 8px; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    #date-picker-bar input { background: #0f172a; color: #38bdf8; border: 1px solid #334155; border-radius: 4px; padding: 3px 6px; font-size: 10px; text-align: center; }
+
+    #top-left-controls {
+      position: absolute; top: 10px; left: 10px; z-index: 1001;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .floating-top-btn {
+      background: #0f172a; color: #22c55e; border: 1px solid #22c55e;
+      padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 11px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    }
+    .floating-top-btn:hover { background: #22c55e; color: #000; }
+    .floating-print-btn { color: #f59e0b; border-color: #f59e0b; }
+    .floating-print-btn:hover { background: #f59e0b; color: #000; }
+
+    #finish-draw-btn {
+      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
+      z-index: 1001; background: #16a34a; color: #fff; border: 1px solid #22c55e;
+      padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: bold;
+      cursor: pointer; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    #window-confirm-bar {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 2500; background: #0f172a; color: #fff; border: 2px solid #ef4444;
+      padding: 8px 16px; border-radius: 8px; font-size: 11px; display: none;
+      align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7); z-index: 3000; display: none;
+      align-items: center; justify-content: center; backdrop-filter: blur(3px);
+    }
+    .modal-box {
+      background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px;
+      width: 420px; max-width: 90%; padding: 15px; color: #fff; font-size: 11px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8); display: flex; flex-direction: column; gap: 10px;
+    }
+    .modal-header { font-weight: bold; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 6px; }
+    .modal-body label { display: block; margin-top: 6px; margin-bottom: 2px; color: #cbd5e1; }
+    .modal-body input, .modal-body select, .modal-body textarea {
+      width: 100%; padding: 6px; background: #1e293b; border: 1px solid #334155;
+      color: #fff; border-radius: 4px; font-size: 11px;
+    }
+
+    #compass-container {
+      position: absolute; bottom: 120px; left: 15px; z-index: 1001;
+      width: 65px; height: 65px; background: rgba(15, 23, 42, 0.85);
+      border: 2px solid #38bdf8; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; backdrop-filter: blur(4px);
+    }
+    .compass-btn { position: absolute; font-size: 9px; font-weight: bold; color: #38bdf8; cursor: pointer; }
+    .compass-n { top: 3px; color: #ef4444; }
+    .compass-s { bottom: 3px; }
+    .compass-e { right: 5px; }
+    .compass-w { left: 5px; }
+    .compass-center {
+      width: 22px; height: 22px; background: #0284c7; color: #fff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 8px; cursor: pointer;
+    }
+
+    #toggle-sidebar-btn {
+      position: absolute; top: 10px; right: 10px; z-index: 1001;
+      background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8;
+      padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px;
+    }
+
+    #mouse-3d-hint {
+      position: absolute; bottom: 10px; left: 10px; z-index: 1001;
+      background: rgba(15, 23, 42, 0.8); color: #94a3b8; font-size: 9px;
+      padding: 4px 8px; border-radius: 4px; border: 1px solid #334155; pointer-events: none;
+    }
+
+    input[type="file"] { display: none; }
+    #terrain-panel { position:absolute; right:14px; bottom:14px; z-index:1002; width:330px; max-width:calc(100% - 28px); background:rgba(15,23,42,.94); border:1px solid #38bdf8; border-radius:8px; padding:9px; color:#e2e8f0; box-shadow:0 8px 25px rgba(0,0,0,.45); backdrop-filter:blur(6px); }
+    #terrain-panel h4 { color:#38bdf8; font-size:11px; margin-bottom:6px; }
+    #terrain-canvas { width:100%; height:120px; display:block; background:linear-gradient(#172554,#0f172a); border-radius:5px; }
+    .terrain-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:6px; font-size:9px; text-align:center; }
+    .terrain-metrics div { background:#1e293b; border-radius:4px; padding:4px; } .terrain-metrics b { display:block; color:#fbbf24; font-size:10px; }
+    #terrain-panel .terrain-actions { display:flex; gap:5px; margin-top:6px; } #terrain-panel button { flex:1; font-size:9px; padding:5px; }
+    #scale-control { position:absolute; left:14px; bottom:88px; z-index:1001; background:rgba(15,23,42,.88); color:#fff; border:1px solid #94a3b8; border-radius:4px; padding:4px 7px; font-size:9px; }
+    #gps-status { color:#22c55e; font-size:9px; margin-top:4px; min-height:14px; }
+
+    @media print {
+      #sidebar, #top-app-menu, #icon-toolbar, #google-categories-bar, #date-picker-bar, #top-left-controls, #compass-container, #toggle-sidebar-btn, #finish-draw-btn, #window-confirm-bar, #mouse-3d-hint, .leaflet-control-container {
+        display: none !important;
+      }
+      #map-container, #map { width: 100vw !important; height: 100vh !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+
+    <!-- منوی فوقانی -->
+    <div id="top-app-menu">
+      <div class="menu-dropdown">
+        <span class="menu-btn">فایل</span>
+        <div class="dropdown-content">
+          <a href="#" onclick="clearDrawings()">پروژه جدید</a>
+          <a href="#" onclick="triggerFileInput()">📂 ورود فایل (KMZ, KML, CSV)</a>
+          <a href="#" onclick="downloadDXF()">🏛️ خروجی اتوکد کامل (DXF استاندارد)</a>
+          <a href="#" onclick="downloadAutoCADScript()">📜 خروجی اسکریپت اتوکد (SCR)</a>
+          <a href="#" onclick="downloadCSV()">📊 خروجی اکسل (CSV)</a>
+          <a href="#" onclick="openPrintModal()">🖨️ تنظیمات پرینت (Window & Scale)</a>
+        </div>
+      </div>
+      <div class="menu-dropdown">
+        <span class="menu-btn">ویرایش</span>
+        <div class="dropdown-content">
+          <a href="#" onclick="clearDrawings()">پاکسازی ترسیمات</a>
+          <a href="#" onclick="setDrawMode('point')">افزودن نقطه</a>
+          <a href="#" onclick="enableOffsetCalibration()">🎯 کالیبراسیون و تصحیح شیفت نقشه</a>
+        </div>
+      </div>
+      <div class="menu-dropdown">
+        <span class="menu-btn">نما</span>
+        <div class="dropdown-content">
+          <a href="#" onclick="switchBaseMap('googleSat')">ماهواره‌ای گوگل</a>
+          <a href="#" onclick="switchBaseMap('schematic')">📐 نمای شماتیک مهندسی</a>
+          <a href="#" onclick="switchBaseMap('topo3d')">توپوگرافی ۳بعدی</a>
+          <a href="#" onclick="reset3DView()">زاویه دید ۳D / 2D</a>
+        </div>
+      </div>
+      <div class="menu-dropdown"><span class="menu-btn" onclick="alert('سامانه جامع نقشه برداری و GIS v5.0 - موتور هوشمند DXF/AutoCAD')">راهنما</span></div>
+    </div>
+
+    <!-- نوار ابزار اصلی -->
+    <div id="icon-toolbar">
+      <label class="tool-icon-btn" style="background:#0369a1; border-color:#38bdf8; color:#fff;" onclick="triggerFileInput()">
+        📂 ورود فایل KMZ / KML / CSV
+      </label>
+      <input type="file" id="geo-file-input" accept=".kmz,.kml,.csv,.gpx" onchange="handleImportFile(event)">
+
+      <button class="tool-icon-btn" onclick="setDrawMode('point')">📌 پین مکان</button>
+      <button class="tool-icon-btn" onclick="setDrawMode('polygon')">📐 چندضلعی</button>
+      <button class="tool-icon-btn" onclick="setDrawMode('line')">📏 مسیر / خط</button>
+      <button class="tool-icon-btn" style="color:#f59e0b; border-color:#f59e0b;" onclick="enableOffsetCalibration()">🎯 تصحیح شیفت (Offset)</button>
+      <button class="tool-icon-btn" onclick="openPrintModal()">🖨️ پرینت تخصصی</button>
+      <button class="tool-icon-btn" style="background:#15803d; border-color:#22c55e; color:#fff;" onclick="downloadDXF()">🏛️ دانلود DXF اتوکد</button>
+      <button class="tool-icon-btn" style="background:#854d0e; border-color:#eab308; color:#fff;" onclick="downloadAutoCADScript()">📜 اسکریپت (SCR)</button>
+    </div>
+
+    <div id="main-layout">
+      
+      <button id="toggle-sidebar-btn" onclick="toggleSidebar()">☰ منو / بستن</button>
+
+      <!-- پنل کناری -->
+      <div id="sidebar">
+        
+        <!-- کادر جستجو -->
+        <div class="search-section">
+          <div class="search-input-group">
+            <input type="text" id="search-input" placeholder="نام شهر، روستا یا مکان..." oninput="handleSmartSearch(this.value)">
+            <button class="btn btn-success" style="flex:0 0 60px;" onclick="executeSearch()">جستجو</button>
+            <div id="search-suggestions"></div>
+          </div>
+        </div>
+
+        <!-- 🌍 تنظیم سیستم مرجع داتوم (Datum System) -->
+        <div>
+          <h3>🌍 سیستم مرجع مبنا (Datum System)</h3>
+          <div class="coord-form">
+            <div style="font-size: 9px; color: #38bdf8;">انتخاب سیستم Datum نقشه پروژه:</div>
+            <select id="datum-select" style="padding:4px; font-size:10px; background:#0f172a; color:#fff; border:1px solid #334155; border-radius:4px;" onchange="updateDatumSetting(this.value)">
+              <option value="WGS84" selected>WGS 1984 (گوگل مپ / جهانی)</option>
+              <option value="ED50">ED 1950 (نقشه‌برداری‌های قدیمی ایران)</option>
+              <option value="NAD23">NAD 1927 / NAD 1983</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 📍 ورود دقیق مختصات (Lat/Lng و UTM) -->
+        <div>
+          <h3>📍 ورود دقیق مختصات و ارتفاع (Z)</h3>
+          <div class="coord-form">
+            <div style="font-size: 9px; color: #38bdf8;">ارتفاع مبنا پروژه (Elevation Z):</div>
+            <div class="coord-row">
+              <input type="number" id="default-z-val" value="0" step="any" placeholder="ارتفاع Z (متر)">
+            </div>
+
+            <div style="font-size: 9px; color: #38bdf8; margin-top: 4px;">ورود بر اساس Lat / Lng:</div>
+            <div class="coord-row">
+              <input type="number" id="input-lat" step="any" placeholder="عرض (Lat)">
+              <input type="number" id="input-lng" step="any" placeholder="طول (Lng)">
+              <button class="btn btn-success" style="flex:0 0 45px;" onclick="goToLatLng()">برو</button>
+            </div>
+            
+            <div style="font-size: 9px; color: #38bdf8; margin-top: 4px;">ورود بر اساس UTM (دقیق کارنی):</div>
+            <div class="coord-row">
+              <input type="number" id="input-utm-x" placeholder="X (متر)">
+              <input type="number" id="input-utm-y" placeholder="Y (متر)">
+              <select id="input-utm-zone" style="flex:0 0 50px;">
+                <option value="38">38N</option>
+                <option value="39">39N</option>
+                <option value="40">40N</option>
+                <option value="41" selected>41N</option>
+              </select>
+              <button class="btn btn-warning" style="flex:0 0 45px;" onclick="goToUTM()">برو</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 📝 ورود گروهی مختصات (Bulk Import Text) -->
+        <div>
+          <h3>📝 ورود گروهی مختصات (کپی / پیست)</h3>
+          <div class="coord-form">
+            <textarea id="bulk-coords-input" rows="3" placeholder="فرمت UTM همراه Z:
+881808, 2800223, 41, 120
+881900, 2800300, 41, 122
+
+یا Lat,Lng,Z:
+25.2698, 60.7902, 15"></textarea>
+            <div class="btn-group">
+              <button class="btn btn-success" onclick="processBulkCoordinates('UTM')">رسم گروهی UTM</button>
+              <button class="btn btn-warning" onclick="processBulkCoordinates('LATLNG')">رسم گروهی Lat/Lng</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🎯 کالیبراسیون و تصحیح شیفت (Offset Calibration) -->
+        <div>
+          <h3>🎯 تصحیح شیفت نقشه (Offset Calibration)</h3>
+          <div class="info-card" style="margin-bottom:5px;">
+            میزان شیفت فعلی: <span id="offset-val">X: 0m | Y: 0m</span>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-warning" onclick="enableOffsetCalibration()">🎯 کالیبره نقطه مرجع</button>
+            <button class="btn btn-danger" onclick="resetOffset()">🔄 ریست شیفت</button>
+          </div>
+        </div>
+
+        <!-- اطلاعات مکان و مختصات -->
+        <div>
+          <h3>📍 اطلاعات مکان و مختصات لحظه‌ای</h3>
+          <div class="info-card">
+            مکان: <span id="current-place-name">چابهار، سیستان و بلوچستان</span><br>
+            عرض/طول: <span id="latlng-val">25.269843° , 60.790218°</span><br>
+            UTM: <span id="utm-val">زون 41N | X: 881808.44 | Y: 2800223.81</span><br>
+            طول / مساحت آخرین ترسیم: <span id="length-val">0</span>
+          </div>
+        </div>
+
+        <!-- انتخاب لایه‌های نقشه -->
+        <div>
+          <h3>🗺️ لایه‌های نقشه و ماهواره</h3>
+          <div class="btn-group">
+            <button class="btn btn-active" onclick="switchBaseMap('googleSat')">Google Sat</button>
+            <button class="btn" onclick="switchBaseMap('schematic')">📐 شماتیک</button>
+            <button class="btn" onclick="switchBaseMap('topo3d')">🗻 توپوگرافی</button>
+            <button class="btn" onclick="switchBaseMap('osm')">OpenStreet</button>
+          </div>
+        </div>
+
+        <!-- ابزارهای ترسیم -->
+        <div>
+          <h3>📍 ابزارهای ترسیم مهندسی</h3>
+          <div class="btn-group">
+            <button id="btn-draw-point" class="btn" onclick="setDrawMode('point')">📌 پین نقطه</button>
+            <button id="btn-draw-line" class="btn" onclick="setDrawMode('line')">📏 رسم مسیر</button>
+            <button id="btn-draw-polygon" class="btn" onclick="setDrawMode('polygon')">📐 رسم پلیگون</button>
+            <button class="btn btn-danger" onclick="clearDrawings()">🗑 پاک‌سازی کامل</button>
+          </div>
+        </div>
+
+        <!-- جدول نقاط -->
+        <div>
+          <h3>📋 جدول عوارض و اطلاعات هندسی</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr><th>نام</th><th>نوع</th><th>X / مساحت</th><th>Y / طول</th><th>Z (m)</th><th>حذف</th></tr>
+              </thead>
+              <tbody id="points-table-body">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- دانلود اتوکد و پرینت/ایمیل -->
+        <div>
+          <h3>💾 خروجی‌ها و چاپ مهندسی</h3>
+          <div class="btn-group">
+            <button class="btn btn-warning" onclick="openPrintModal()">🖨️ پرینت Window / اسکیل</button>
+            <button class="btn btn-success" onclick="openEmailModal()">✉️ ارسال ایمیل</button>
+            <button class="btn btn-success" onclick="downloadDXF()">🏛️ خروجی اتوکد (DXF)</button>
+            <button class="btn btn-warning" onclick="downloadAutoCADScript()">📜 اسکریپت (SCR)</button>
+            <button class="btn btn-success" onclick="downloadCSV()">📊 خروجی اکسل (CSV)</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- بخش نقشه اصلی -->
+      <div id="map-container">
+        
+        <!-- نوار دسته‌بندی سریع گوگل مپ -->
+        <div id="google-categories-bar">
+          <div class="cat-chip" onclick="searchCategory('رستوران')">🍴 رستوران‌ها</div>
+          <div class="cat-chip" onclick="searchCategory('هتل')">🏨 هتل‌ها</div>
+          <div class="cat-chip" onclick="searchCategory('پمپ بنزین')">⛽ پمپ بنزین</div>
+          <div class="cat-chip" onclick="searchCategory('حمل و نقل')">🚌 حمل و نقل</div>
+          <div class="cat-chip" onclick="searchCategory('داروخانه')">💊 داروخانه‌ها</div>
+          <div class="cat-chip" onclick="searchCategory('خودپرداز')">🏧 خودپرداز</div>
+        </div>
+
+        <!-- دکمه‌های بالا سمت چپ -->
+        <div id="top-left-controls">
+          <button class="floating-top-btn" onclick="locateUserGPS()">🎯 GPS موقعیت من</button><span id="gps-status"></span>
+          <button class="floating-top-btn floating-print-btn" onclick="openPrintModal()">🖨️ پرینت دستی (Window)</button>
+        </div>
+
+        <!-- نوار تایم‌لاین تاریخ -->
+        <div id="date-picker-bar">
+          <span>📅 تاریخ سفارشی:</span>
+          <input type="text" id="custom-shamsi-date" placeholder="1398/02/15" style="width: 80px;" onchange="applyCustomShamsiDate(this.value)">
+          <input type="date" id="sat-date" value="2020-05-15" onchange="changeSatelliteDate(this.value)">
+          <button class="btn btn-warning" style="padding:2px 8px; font-size:9px;" onclick="fetchHistoricalArchive()">🌍 آرشیو گوگل ارث</button>
+          <span id="date-status-label" style="color: #38bdf8;">(تصاویر سال انتخابی)</span>
+        </div>
+
+        <!-- دکمه اتمام ترسیم -->
+        <button id="finish-draw-btn" onclick="finishCurrentDrawing()">✅ پایان ترسیم (Close)</button>
+
+        <!-- نوار تایید Window -->
+        <div id="window-confirm-bar">
+          <span>🎯 محدوده چاپ انتخاب شد.</span>
+          <button class="btn btn-success" onclick="proceedToPrintWindow()">🖨️ تایید و پرینت</button>
+          <button class="btn btn-warning" onclick="startCustomWindowSelection()">🔄 انتخاب مجدد</button>
+          <button class="btn btn-danger" onclick="cancelWindowPrint()">انصراف</button>
+        </div>
+
+        <!-- قطب‌نما -->
+        <div id="compass-container">
+          <span class="compass-btn compass-n" onclick="rotateMap(0)">N</span>
+          <span class="compass-btn compass-s" onclick="rotateMap(180)">S</span>
+          <span class="compass-btn compass-e" onclick="rotateMap(90)">E</span>
+          <span class="compass-btn compass-w" onclick="rotateMap(-90)">W</span>
+          <div class="compass-center" onclick="reset3DView()">3D</div>
+        </div>
+
+        <div id="mouse-3d-hint">💡 کلید Shift + چرخش قرقره موس = شیب ۳بعدی | کلید وسط موس = چرخش</div>
+
+        <div id="scale-control">مقیاس: --</div>
+        <div id="terrain-panel">
+          <h4>⛰️ پروفایل ارتفاع مسیر / نمای relief</h4>
+          <canvas id="terrain-canvas" width="620" height="220"></canvas>
+          <div class="terrain-metrics"><div>حداقل<b id="elev-min">--</b></div><div>حداکثر<b id="elev-max">--</b></div><div>اختلاف ارتفاع<b id="elev-diff">--</b></div></div>
+          <div id="elev-status" style="font-size:9px;color:#94a3b8;margin-top:5px">یک خط رسم کنید تا ارتفاع واقعی نقاط خوانده شود.</div>
+          <div class="terrain-actions"><button class="btn" onclick="toggleTerrainPanel()">نمایش/مخفی</button><button class="btn btn-warning" onclick="refreshActiveElevation()">به‌روزرسانی ارتفاع</button></div>
+        </div>
+        <div id="map"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- مدال پرینت -->
+  <div id="print-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">🖨️ تنظیمات پرینت اختصاصی (Window & Scale)</div>
+      <div class="modal-body">
+        <label>روش انتخاب محدوده چاپ:</label>
+        <button class="btn btn-warning" style="width:100%; margin-bottom:8px; padding:8px; font-weight:bold;" onclick="startCustomWindowSelection()">
+          🖱️ انتخاب دستی محدوده روی نقشه (Window Mode)
+        </button>
+
+        <label>مقیاس چاپ (Plot Scale):</label>
+        <select id="print-scale">
+          <option value="fit">Fit to Paper (خودکار)</option>
+          <option value="500">1:500 (بزرگ‌نمایی شهری)</option>
+          <option value="1000">1:1000 (نقشه کاداستر)</option>
+          <option value="2000">1:2000 (نقشه تفصیلی)</option>
+        </select>
+
+        <label>عنوان نقشه چاپی:</label>
+        <input type="text" id="print-title" value="نقشه توپوگرافی و ترسیمات مهندسی">
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="executeFullDisplayPrint()">🖨️ پرینت کل صفحه</button>
+        <button class="btn btn-danger" onclick="closePrintModal()">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مدال ایمیل -->
+  <div id="email-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">✉️ ارسال اطلاعات نقشه به ایمیل</div>
+      <div class="modal-body">
+        <label>آدرس ایمیل دریافت‌کننده:</label>
+        <input type="email" id="email-to" placeholder="example@domain.com">
+        <label>موضوع ایمیل:</label>
+        <input type="text" id="email-subject" value="ارسال فایل خروجی اتوکد و مختصات نقشه">
+        <label>متن پیام:</label>
+        <textarea id="email-body" rows="3"></textarea>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="sendEmailSubmit()">📤 ارسال ایمیل</button>
+        <button class="btn btn-danger" onclick="closeEmailModal()">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let pointsData = [];
+    let drawnFeatures = [];
+    let currentMode = null;
+    let activeShapePoints = [];
+    let currentPolyline = null;
+    let currentPolygon = null;
+    let currentCenterLat = 25.269843;
+    let currentCenterLng = 60.790218;
+
+    let offsetLat = 0;
+    let offsetLng = 0;
+    let isCalibrating = false;
+    let selectedDatum = "WGS84";
+
+    let isWindowSelecting = false;
+    let windowStartLatLng = null;
+    let windowRectangle = null;
+    let selectedPrintBounds = null;
+
+    let currentRotation = 0;
+    let currentTilt = 0;
+    let isMiddleMouseDown = false;
+    let startMouseX = 0;
+    let gpsMarker = null, gpsAccuracy = null, gpsWatchId = null;
+    let terrainData = [];
+    let elevationRequestToken = 0;
+
+    const baseLayers = {
+      googleSat: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+      schematic: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 19 }),
+      topo3d: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: 'OpenTopoMap' }),
+      relief3d: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri World Hillshade' }),
+      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 })
+    };
+
+    const map = L.map('map', {
+      center: [currentCenterLat, currentCenterLng],
+      zoom: 13,
+      zoomControl: false,
+      layers: [baseLayers.googleSat]
+    });
+
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    let activeLayer = baseLayers.googleSat;
+
+    function switchBaseMap(layerKey) {
+      if (!baseLayers[layerKey]) return;
+      if (activeLayer && map.hasLayer(activeLayer)) map.removeLayer(activeLayer);
+      activeLayer = baseLayers[layerKey]; map.addLayer(activeLayer);
+      document.querySelectorAll('[onclick^="switchBaseMap"]').forEach(b => b.classList.toggle('btn-active', b.getAttribute('onclick').includes("'"+layerKey+"'")));
+      updateScaleControl(); setTimeout(() => map.invalidateSize(), 80);
+    }
+    function updateScaleControl() {
+      const lat=map.getCenter().lat, zoom=map.getZoom();
+      const metersPerPixel=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,zoom);
+      const raw=metersPerPixel*110, nice=Math.pow(10,Math.floor(Math.log10(raw))), value=Math.round(raw/nice)*nice;
+      document.getElementById('scale-control').textContent=`مقیاس تقریبی: 1:${Math.max(1,Math.round(value/(metersPerPixel*100))) } | ${value>=1000?(value/1000).toFixed(1)+' km':Math.round(value)+' m'}`;
+    }
+    map.on('zoomend moveend', updateScaleControl);
+    setTimeout(updateScaleControl, 200);
+
+    // ==========================================
+    // 📐 الگوریتم ریاضی کروی کارنی (Karney) برای UTM
+    // ==========================================
+    function utmToLatLngAccurate(x, y, zone, northernHemisphere = true) {
+      const a = 6378137.0;
+      const f = 1 / 298.257223563;
+      const k0 = 0.9996;
+      const e = Math.sqrt(2 * f - f * f);
+      const ePrimeSq = (e * e) / (1 - e * e);
+
+      const utmX = x - 500000.0;
+      const utmY = northernHemisphere ? y : y - 10000000.0;
+
+      const lonOrigin = (zone - 1) * 6 - 180 + 3;
+
+      const M = utmY / k0;
+      const mu = M / (a * (1 - Math.pow(e, 2) / 4 - 3 * Math.pow(e, 4) / 64 - 5 * Math.pow(e, 6) / 256));
+
+      const phi1Rad = mu + (3 * e / 2 - 27 * Math.pow(e, 3) / 32) * Math.sin(2 * mu)
+                         + (21 * Math.pow(e, 2) / 16 - 55 * Math.pow(e, 4) / 32) * Math.sin(4 * mu)
+                         + (151 * Math.pow(e, 3) / 96) * Math.sin(6 * mu);
+
+      const N1 = a / Math.sqrt(1 - Math.pow(e * Math.sin(phi1Rad), 2));
+      const T1 = Math.pow(Math.tan(phi1Rad), 2);
+      const C1 = ePrimeSq * Math.pow(Math.cos(phi1Rad), 2);
+      const R1 = a * (1 - e * e) / Math.pow(1 - Math.pow(e * Math.sin(phi1Rad), 2), 1.5);
+      const D = utmX / (N1 * k0);
+
+      let lat = phi1Rad - (N1 * Math.tan(phi1Rad) / R1) * (D * D / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ePrimeSq) * Math.pow(D, 4) / 24 + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ePrimeSq - 3 * C1 * C1) * Math.pow(D, 6) / 720);
+      let lon = (D - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6 + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ePrimeSq + 24 * T1 * T1) * Math.pow(D, 5) / 120) / Math.cos(phi1Rad);
+
+      lat = lat * (180 / Math.PI);
+      lon = lonOrigin + lon * (180 / Math.PI);
+
+      if (selectedDatum === "ED50") {
+        lat -= 0.00075;
+        lon += 0.00092;
+      }
+
+      return { lat, lng: lon };
+    }
+
+    function latLngToUTMAccurate(lat, lon) {
+      const a = 6378137.0;
+      const f = 1 / 298.257223563;
+      const k0 = 0.9996;
+      const e = Math.sqrt(2 * f - f * f);
+
+      const zone = Math.floor((lon + 180) / 6) + 1;
+      const lonOrigin = (zone - 1) * 6 - 180 + 3;
+
+      const latRad = lat * Math.PI / 180;
+      const lonRad = lon * Math.PI / 180;
+      const lonOriginRad = lonOrigin * Math.PI / 180;
+
+      const N = a / Math.sqrt(1 - e * e * Math.sin(latRad) * Math.sin(latRad));
+      const T = Math.pow(Math.tan(latRad), 2);
+      const C = (e * e / (1 - e * e)) * Math.pow(Math.cos(latRad), 2);
+      const A = (lonRad - lonOriginRad) * Math.cos(latRad);
+
+      const M = a * ((1 - e*e/4 - 3*Math.pow(e,4)/64 - 5*Math.pow(e,6)/256) * latRad 
+                - (3*e*e/8 + 3*Math.pow(e,4)/32 + 45*Math.pow(e,6)/1024) * Math.sin(2*latRad)
+                + (15*Math.pow(e,4)/256 + 45*Math.pow(e,6)/1024) * Math.sin(4*latRad)
+                - (35*Math.pow(e,6)/3072) * Math.sin(6*latRad));
+
+      const x = k0 * N * (A + (1-T+C)*Math.pow(A,3)/6 + (5-18*T+T*T+72*C-58*(e*e/(1-e*e)))*Math.pow(A,5)/120) + 500000.0;
+      const y = k0 * (M + N * Math.tan(latRad) * (A*A/2 + (5-T+9*C+4*C*C)*Math.pow(A,4)/24 + (61-58*T+T*T+600*C-330*(e*e/(1-e*e)))*Math.pow(A,6)/720));
+
+      return { x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)), zone };
+    }
+
+    function getDefaultZ() {
+      const zInput = parseFloat(document.getElementById('default-z-val').value);
+      return isNaN(zInput) ? 0 : zInput;
+    }
+
+    function updateDatumSetting(val) {
+      selectedDatum = val;
+      alert(`سیستم مرجع Datum به ${val} تغییر یافت.`);
+    }
+
+    function triggerFileInput() { document.getElementById('geo-file-input').click(); }
+
+    function handleImportFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const filename = file.name.toLowerCase();
+
+      if (filename.endsWith('.kmz') || filename.endsWith('.kml')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const runKmlOmnivore = (kmlText) => {
+            const customLayer = omnivore.kml.parse(kmlText);
+            customLayer.addTo(map);
+            map.fitBounds(customLayer.getBounds());
+            alert(`✅ فایل ${file.name} بارگذاری شد.`);
+          };
+          if (filename.endsWith('.kmz')) {
+            JSZip.loadAsync(e.target.result).then(function(zip) {
+              const kmlFile = Object.keys(zip.files).find(name => name.endsWith('.kml'));
+              if (kmlFile) zip.file(kmlFile).async("string").then(runKmlOmnivore);
+            });
+          } else runKmlOmnivore(e.target.result);
+        };
+        if (filename.endsWith('.kmz')) reader.readAsArrayBuffer(file);
+        else reader.readAsText(file);
+
+      } else if (filename.endsWith('.csv')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const lines = e.target.result.split('\n');
+          lines.forEach((line, idx) => {
+            if (idx === 0 || !line.trim()) return;
+            const parts = line.split(',');
+            if (parts.length >= 2) {
+              const lat = parseFloat(parts[0]);
+              const lng = parseFloat(parts[1]);
+              const z = parts[2] ? parseFloat(parts[2]) : getDefaultZ();
+              if (!isNaN(lat) && !isNaN(lng)) addPointToMap(lat, lng, `نقطه ${idx}`, z);
+            }
+          });
+          alert(`فایل CSV با موفقیت وارد گردید.`);
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function processBulkCoordinates(type) {
+      const text = document.getElementById('bulk-coords-input').value.trim();
+      if (!text) return;
+      const lines = text.split('\n');
+      let count = 0;
+
+      lines.forEach((line, idx) => {
+        const parts = line.split(',').map(s => parseFloat(s.trim()));
+        if (type === 'UTM' && parts.length >= 3) {
+          const zVal = parts[3] !== undefined ? parts[3] : getDefaultZ();
+          const res = utmToLatLngAccurate(parts[0], parts[1], parts[2]);
+          addPointToMap(res.lat, res.lng, `ورودی UTM ${idx+1}`, zVal);
+          count++;
+        } else if (type === 'LATLNG' && parts.length >= 2) {
+          const zVal = parts[2] !== undefined ? parts[2] : getDefaultZ();
+          addPointToMap(parts[0], parts[1], `ورودی LatLng ${idx+1}`, zVal);
+          count++;
+        }
+      });
+      alert(`تعداد ${count} نقطه اضافه گردید.`);
+    }
+
+    function addPointToMap(lat, lng, name, zVal = null) {
+      const z = zVal !== null ? zVal : getDefaultZ();
+      const utm = latLngToUTMAccurate(lat, lng);
+      const marker = L.marker([lat, lng]).addTo(map).bindPopup(`<b>${name}</b><br>UTM X: ${utm.x}<br>UTM Y: ${utm.y}<br>Z: ${z}m`);
+      
+      const id = Date.now() + Math.random();
+      const featureObj = { id, type: 'POINT', name, x: utm.x, y: utm.y, z, layer: marker };
+      drawnFeatures.push(featureObj);
+      pointsData.push({ id, name, type: 'نقطه', x: utm.x, y: utm.y, z });
+      renderTable();
+    }
+
+    function goToLatLng() {
+      const lat = parseFloat(document.getElementById('input-lat').value);
+      const lng = parseFloat(document.getElementById('input-lng').value);
+      if (isNaN(lat) || isNaN(lng)) return;
+      currentCenterLat = lat; currentCenterLng = lng;
+      map.flyTo([lat, lng], 16);
+      addPointToMap(lat, lng, "نقطه سفارشی");
+    }
+
+    function goToUTM() {
+      const x = parseFloat(document.getElementById('input-utm-x').value);
+      const y = parseFloat(document.getElementById('input-utm-y').value);
+      const zone = parseInt(document.getElementById('input-utm-zone').value);
+      if (isNaN(x) || isNaN(y)) return;
+      const converted = utmToLatLngAccurate(x, y, zone);
+      currentCenterLat = converted.lat; currentCenterLng = converted.lng;
+      map.flyTo([converted.lat, converted.lng], 16);
+      addPointToMap(converted.lat, converted.lng, `UTM ${zone}N`);
+    }
+
+    function enableOffsetCalibration() {
+      isCalibrating = true;
+      document.getElementById('map').classList.add('calibrate-mode-active');
+      alert("🎯 روی نقطه مرجع واقعی روی نقشه کلیک کنید.");
+    }
+
+    function applyOffset(clickLat, clickLng) {
+      offsetLat = clickLat - currentCenterLat;
+      offsetLng = clickLng - currentCenterLng;
+      const offsetMetersX = (offsetLng * 111000 * Math.cos(clickLat * Math.PI / 180)).toFixed(1);
+      const offsetMetersY = (offsetLat * 111000).toFixed(1);
+      document.getElementById('offset-val').innerText = `X: ${offsetMetersX}m | Y: ${offsetMetersY}m`;
+      isCalibrating = false;
+      document.getElementById('map').classList.remove('calibrate-mode-active');
+    }
+
+    function resetOffset() {
+      offsetLat = 0; offsetLng = 0;
+      document.getElementById('offset-val').innerText = `X: 0m | Y: 0m`;
+    }
+
+    // کنترل ۳بعدی
+    const mapContainer = document.getElementById('map-container');
+    mapContainer.addEventListener('wheel', function(e) {
+      if (e.shiftKey) {
+        e.preventDefault();
+        currentTilt = (e.deltaY > 0) ? Math.max(0, currentTilt - 5) : Math.min(60, currentTilt + 5);
+        apply3DTransform();
+      }
+    }, { passive: false });
+
+    mapContainer.addEventListener('mousedown', function(e) {
+      if (e.button === 1) { e.preventDefault(); isMiddleMouseDown = true; startMouseX = e.clientX; }
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (isMiddleMouseDown) {
+        currentRotation += (e.clientX - startMouseX) * 0.5;
+        startMouseX = e.clientX;
+        apply3DTransform();
+      }
+    });
+    window.addEventListener('mouseup', function(e) { if (e.button === 1) isMiddleMouseDown = false; });
+
+    function apply3DTransform() { document.getElementById('map').style.transform = `rotateX(${currentTilt}deg) rotateZ(${currentRotation}deg)`; }
+    function rotateMap(deg) { currentRotation = deg; apply3DTransform(); }
+    function reset3DView() { currentRotation = 0; currentTilt = (currentTilt === 0) ? 45 : 0; apply3DTransform(); }
+
+    function setDrawMode(mode) {
+      if (isWindowSelecting) cancelWindowPrint();
+      currentMode = mode;
+      activeShapePoints = [];
+      const mapDiv = document.getElementById('map');
+      document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('btn-active'));
+
+      if (mode) {
+        mapDiv.classList.add('draw-mode-active');
+        if (mode === 'point') document.getElementById('btn-draw-point').classList.add('btn-active');
+        if (mode === 'line') {
+          document.getElementById('btn-draw-line').classList.add('btn-active');
+          document.getElementById('finish-draw-btn').style.display = 'block';
+        }
+        if (mode === 'polygon') {
+          document.getElementById('btn-draw-polygon').classList.add('btn-active');
+          document.getElementById('finish-draw-btn').style.display = 'block';
+        }
+      } else {
+        mapDiv.classList.remove('draw-mode-active');
+        document.getElementById('finish-draw-btn').style.display = 'none';
+      }
+    }
+
+    map.on('click', function(e) {
+      if (isWindowSelecting) return;
+      if (isCalibrating) { applyOffset(e.latlng.lat, e.latlng.lng); return; }
+
+      const lat = e.latlng.lat - offsetLat;
+      const lng = e.latlng.lng - offsetLng;
+      currentCenterLat = lat; currentCenterLng = lng;
+
+      const utm = latLngToUTMAccurate(lat, lng);
+      const zVal = getDefaultZ();
+
+      document.getElementById('latlng-val').innerText = `${lat.toFixed(6)}° , ${lng.toFixed(6)}°`;
+      document.getElementById('utm-val').innerText = `زون ${utm.zone}N | X: ${utm.x} | Y: ${utm.y}`;
+
+      if (!currentMode) return;
+
+      if (currentMode === 'point') {
+        const ptName = `P-${pointsData.length + 1}`;
+        addPointToMap(lat, lng, ptName, zVal);
+        setDrawMode(null);
+      } 
+      else if (currentMode === 'line') {
+        activeShapePoints.push({ lat: e.latlng.lat, lng: e.latlng.lng, x: utm.x, y: utm.y, z: zVal });
+        L.circleMarker([e.latlng.lat, e.latlng.lng], { radius: 4, color: '#38bdf8' }).addTo(map);
+
+        if (currentPolyline) map.removeLayer(currentPolyline);
+        const latLngs = activeShapePoints.map(p => [p.lat, p.lng]);
+        currentPolyline = L.polyline(latLngs, { color: '#38bdf8', weight: 3 }).addTo(map);
+      } 
+      else if (currentMode === 'polygon') {
+        activeShapePoints.push({ lat: e.latlng.lat, lng: e.latlng.lng, x: utm.x, y: utm.y, z: zVal });
+        L.circleMarker([e.latlng.lat, e.latlng.lng], { radius: 4, color: '#16a34a' }).addTo(map);
+
+        if (currentPolygon) map.removeLayer(currentPolygon);
+        const latLngs = activeShapePoints.map(p => [p.lat, p.lng]);
+        currentPolygon = L.polygon(latLngs, { color: '#16a34a', fillColor: '#16a34a', fillOpacity: 0.35 }).addTo(map);
+      }
+    });
+
+    // محاسبه طول مسیر (متر)
+    function calculatePathLength(pts) {
+      let total = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const dx = pts[i+1].x - pts[i].x;
+        const dy = pts[i+1].y - pts[i].y;
+        const dz = pts[i+1].z - pts[i].z;
+        total += Math.sqrt(dx*dx + dy*dy + dz*dz);
+      }
+      return total;
+    }
+
+    // محاسبه مساحت پلیگون (مترمربع) - روش Gauss Shoelace
+    function calculatePolygonArea(pts) {
+      let area = 0;
+      const n = pts.length;
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        area += pts[i].x * pts[j].y;
+        area -= pts[j].x * pts[i].y;
+      }
+      return Math.abs(area / 2.0);
+    }
+
+    async function fetchElevations(points) {
+      if (!points || !points.length) return;
+      const token=++elevationRequestToken;
+      const lats=points.map(p=>p.lat).join(','); const lngs=points.map(p=>p.lng).join(',');
+      const status=document.getElementById('elev-status'); status.textContent='در حال دریافت ارتفاع توپوگرافی...';
+      try {
+        const r=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+        const d=await r.json(); if(token!==elevationRequestToken || !Array.isArray(d.elevation)) return;
+        points.forEach((p,i)=>{ if(Number.isFinite(d.elevation[i])) p.z=d.elevation[i]; });
+        terrainData=points.map(p=>({distance:0,elevation:p.z}));
+        let dist=0; terrainData.forEach((v,i)=>{ if(i) dist += Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y); v.distance=dist; });
+        drawTerrainProfile(); status.textContent=`ارتفاع ${points.length} نقطه به‌روز شد (داده توپوگرافی متر).`;
+        document.getElementById('length-val').textContent=`طول افقی: ${dist.toFixed(2)} متر | طول سه‌بعدی: ${calculatePathLength(points).toFixed(2)} متر`;
+      } catch(e) { status.textContent='دریافت ارتفاع ناموفق بود؛ Z دستی حفظ شد.'; }
+    }
+    function drawTerrainProfile() {
+      const c=document.getElementById('terrain-canvas'), ctx=c.getContext('2d'), w=c.width, h=c.height; ctx.clearRect(0,0,w,h);
+      if(!terrainData.length) return; const vals=terrainData.map(x=>x.elevation), min=Math.min(...vals), max=Math.max(...vals), span=Math.max(1,max-min);
+      document.getElementById('elev-min').textContent=min.toFixed(1)+' m'; document.getElementById('elev-max').textContent=max.toFixed(1)+' m'; document.getElementById('elev-diff').textContent=(max-min).toFixed(1)+' m';
+      const x=i=>terrainData.length===1?w/2:i*w/(terrainData.length-1), y=v=>h-14-((v-min)/span)*(h-28);
+      ctx.beginPath(); terrainData.forEach((v,i)=>i?ctx.lineTo(x(i),y(v.elevation)):ctx.moveTo(x(i),y(v.elevation))); ctx.lineTo(w-1,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle='rgba(34,197,94,.28)';ctx.fill();
+      ctx.beginPath(); terrainData.forEach((v,i)=>i?ctx.lineTo(x(i),y(v.elevation)):ctx.moveTo(x(i),y(v.elevation))); ctx.strokeStyle='#fbbf24';ctx.lineWidth=3;ctx.stroke();
+    }
+    function refreshActiveElevation(){ const f=drawnFeatures.find(x=>x.type==='LINE'); if(f) fetchElevations(f.points); else document.getElementById('elev-status').textContent='ابتدا یک خط رسم کنید.'; }
+    function toggleTerrainPanel(){ const p=document.getElementById('terrain-panel'); p.style.opacity=p.style.opacity==='0.15'?'1':'0.15'; }
+
+    function finishCurrentDrawing() {
+      const id = Date.now() + Math.random();
+      if (currentMode === 'line' && activeShapePoints.length > 1) {
+        const lineName = `L-${drawnFeatures.length + 1}`;
+        const len = calculatePathLength(activeShapePoints);
+        document.getElementById('length-val').innerText = `طول: ${len.toFixed(2)} متر`;
+        
+        drawnFeatures.push({ id, type: 'LINE', name: lineName, points: [...activeShapePoints], layer: currentPolyline });
+        fetchElevations(drawnFeatures[drawnFeatures.length-1].points);
+        pointsData.push({ id, name: lineName, type: 'خط', x: `${len.toFixed(1)}m`, y: `${activeShapePoints.length} Pts`, z: activeShapePoints[0].z });
+      } 
+      else if (currentMode === 'polygon' && activeShapePoints.length > 2) {
+        const polyName = `PG-${drawnFeatures.length + 1}`;
+        const area = calculatePolygonArea(activeShapePoints);
+        document.getElementById('length-val').innerText = `مساحت: ${area.toFixed(1)} m² (${(area/10000).toFixed(2)} هکتار)`;
+        
+        drawnFeatures.push({ id, type: 'POLYGON', name: polyName, points: [...activeShapePoints], layer: currentPolygon });
+        pointsData.push({ id, name: polyName, type: 'پلیگون', x: `${area.toFixed(1)}m²`, y: `${(area/10000).toFixed(2)}ha`, z: activeShapePoints[0].z });
+      }
+
+      renderTable();
+      currentPolyline = null; currentPolygon = null; activeShapePoints = [];
+      setDrawMode(null);
+    }
+
+    // ==========================================
+    // 🏛️ موتور تولید فایل DXF استاندارد مهندسی
+    // ==========================================
+    function downloadDXF() {
+      if (drawnFeatures.length === 0) { alert("هیچ عارضه‌ای ترسیم نشده است."); return; }
+
+      let dxf = `0\nSECTION\n2\nHEADER\n0\nENDSEC\n`;
+      
+      // جدول لایه‌ها (Tables & Layers)
+      dxf += `0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n`;
+      
+      // لایه نقاط
+      dxf += `0\nLAYER\n2\nGIS_POINTS\n70\n0\n62\n1\n6\nCONTINUOUS\n`; // قرمز
+      // لایه خطوط
+      dxf += `0\nLAYER\n2\nGIS_LINES\n70\n0\n62\n5\n6\nCONTINUOUS\n`;  // آبی
+      // لایه پلیگون‌ها
+      dxf += `0\nLAYER\n2\nGIS_POLYGONS\n70\n0\n62\n3\n6\nCONTINUOUS\n`; // سبز
+      // لایه متن و لیبل‌ها
+      dxf += `0\nLAYER\n2\nGIS_TEXTS\n70\n0\n62\n2\n6\nCONTINUOUS\n`;  // زرد
+
+      dxf += `0\nENDTAB\n0\nENDSEC\n`;
+
+      // بخش عوارض و هندسه‌ها (ENTITIES)
+      dxf += `0\nSECTION\n2\nENTITIES\n`;
+
+      drawnFeatures.forEach(f => {
+        if (f.type === 'POINT') {
+          // عارضه نقطه
+          dxf += `0\nPOINT\n8\nGIS_POINTS\n10\n${f.x}\n20\n${f.y}\n30\n${f.z}\n`;
+          // اضافه کردن متن نام نقطه رو به روی نقطه
+          dxf += `0\nTEXT\n8\nGIS_TEXTS\n10\n${f.x + 1.5}\n20\n${f.y + 1.5}\n30\n${f.z}\n40\n2.0\n1\n${f.name}\n`;
+        } 
+        else if (f.type === 'LINE') {
+          for (let i = 0; i < f.points.length - 1; i++) {
+            const p1 = f.points[i]; 
+            const p2 = f.points[i+1];
+            dxf += `0\nLINE\n8\nGIS_LINES\n10\n${p1.x}\n20\n${p1.y}\n30\n${p1.z}\n11\n${p2.x}\n21\n${p2.y}\n31\n${p2.z}\n`;
+          }
+          // متن نام مسیر
+          const midP = f.points[0];
+          dxf += `0\nTEXT\n8\nGIS_TEXTS\n10\n${midP.x}\n20\n${midP.y}\n30\n${midP.z}\n40\n2.5\n1\n${f.name}\n`;
+        } 
+        else if (f.type === 'POLYGON') {
+          dxf += `0\nLWPOLYLINE\n8\nGIS_POLYGONS\n90\n${f.points.length}\n70\n1\n`; // 70=1 یعنی Closed
+          f.points.forEach(p => {
+            dxf += `10\n${p.x}\n20\n${p.y}\n38\n${p.z}\n`;
+          });
+          // متن نام پلیگون
+          const midP = f.points[0];
+          dxf += `0\nTEXT\n8\nGIS_TEXTS\n10\n${midP.x}\n20\n${midP.y}\n30\n${midP.z}\n40\n3.0\n1\n${f.name}\n`;
+        }
+      });
+
+      dxf += `0\nENDSEC\n0\nEOF\n`;
+
+      const blob = new Blob([dxf], { type: 'application/dxf;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "Survey_Plan_AutoCAD.dxf";
+      link.click();
+    }
+
+    // ==========================================
+    // 📜 توليد اسکریپت نیتیو اتوکد (AutoCAD SCR)
+    // ==========================================
+    function downloadAutoCADScript() {
+      if (drawnFeatures.length === 0) { alert("هیچ عارضه‌ای ترسیم نشده است."); return; }
+
+      let scr = `_UNITS 2 4 1 4 0 N\n`;
+      
+      drawnFeatures.forEach(f => {
+        if (f.type === 'POINT') {
+          scr += `_POINT ${f.x},${f.y},${f.z}\n`;
+          scr += `_TEXT ${f.x + 1},${f.y + 1},${f.z} 2.0 0 ${f.name}\n`;
+        } else if (f.type === 'LINE') {
+          scr += `_LINE `;
+          f.points.forEach(p => { scr += `${p.x},${p.y},${p.z} `; });
+          scr += `\n\n`;
+        } else if (f.type === 'POLYGON') {
+          scr += `_PLINE `;
+          f.points.forEach(p => { scr += `${p.x},${p.y} `; });
+          scr += `C\n`; // Close polygon
+        }
+      });
+
+      scr += `_ZOOM _E\n`;
+
+      const blob = new Blob([scr], { type: 'text/plain;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "AutoCAD_Commands.scr";
+      link.click();
+    }
+
+    function downloadCSV() {
+      let csv = "\uFEFFName,Type,X_Area,Y_Length,Elevation_Z\n";
+      pointsData.forEach(p => { csv += `${p.name},${p.type},${p.x},${p.y},${p.z}\n`; });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "Engineering_Data.csv";
+      link.click();
+    }
+
+    function deleteFeature(id) {
+      const index = drawnFeatures.findIndex(f => f.id === id);
+      if (index !== -1) {
+        if (drawnFeatures[index].layer) map.removeLayer(drawnFeatures[index].layer);
+        drawnFeatures.splice(index, 1);
+      }
+      const pIdx = pointsData.findIndex(p => p.id === id);
+      if (pIdx !== -1) pointsData.splice(pIdx, 1);
+      renderTable();
+    }
+
+    function clearDrawings() {
+      drawnFeatures.forEach(f => { if(f.layer) map.removeLayer(f.layer); });
+      drawnFeatures = []; pointsData = []; activeShapePoints = [];
+      renderTable(); setDrawMode(null);
+      document.getElementById('length-val').innerText = '0';
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('points-table-body');
+      tbody.innerHTML = '';
+      pointsData.forEach(p => {
+        tbody.innerHTML += `<tr>
+          <td>${p.name}</td>
+          <td>${p.type}</td>
+          <td>${p.x}</td>
+          <td>${p.y}</td>
+          <td>${p.z}</td>
+          <td><span class="action-btn" onclick="deleteFeature(${p.id})">❌</span></td>
+        </tr>`;
+      });
+    }
+
+    function locateUserGPS() {
+      const status=document.getElementById('gps-status');
+      if(!navigator.geolocation){ status.textContent='مرورگر GPS را پشتیبانی نمی‌کند.'; return; }
+      status.textContent='در حال دریافت موقعیت دقیق...';
+      navigator.geolocation.getCurrentPosition(p=>{
+        currentCenterLat=p.coords.latitude; currentCenterLng=p.coords.longitude;
+        if(gpsMarker) map.removeLayer(gpsMarker); if(gpsAccuracy) map.removeLayer(gpsAccuracy);
+        gpsMarker=L.marker([currentCenterLat,currentCenterLng]).addTo(map).bindPopup(`موقعیت دقیق GPS<br>دقت افقی: ${Math.round(p.coords.accuracy)} متر`).openPopup();
+        gpsAccuracy=L.circle([currentCenterLat,currentCenterLng],{radius:p.coords.accuracy,color:'#22c55e',fillColor:'#22c55e',fillOpacity:.12,weight:1}).addTo(map);
+        map.flyTo([currentCenterLat,currentCenterLng],17); document.getElementById('latlng-val').textContent=`${currentCenterLat.toFixed(7)}° , ${currentCenterLng.toFixed(7)}°`;
+        status.textContent=`GPS فعال | دقت افقی: ${Math.round(p.coords.accuracy)} متر${p.coords.altitude!=null?' | ارتفاع GPS: '+p.coords.altitude.toFixed(1)+' m':''}`;
+      },err=>{ status.textContent='خطا در GPS: '+err.message+'؛ اجازه دسترسی و HTTPS را بررسی کنید.'; },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('collapsed');
+      setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    // کنترل پرینت و جستجو
+    function openPrintModal() { document.getElementById('print-modal').style.display = 'flex'; }
+    function closePrintModal() { document.getElementById('print-modal').style.display = 'none'; }
+    function startCustomWindowSelection() {
+      closePrintModal();
+      document.getElementById('window-confirm-bar').style.display = 'none';
+      if (windowRectangle) map.removeLayer(windowRectangle);
+      isWindowSelecting = true; map.dragging.disable();
+      document.getElementById('map').classList.add('window-select-active');
+    }
+
+    map.on('mousedown', function(e) {
+      if (!isWindowSelecting) return;
+      windowStartLatLng = e.latlng;
+      if (windowRectangle) map.removeLayer(windowRectangle);
+      windowRectangle = L.rectangle([windowStartLatLng, windowStartLatLng], { color: "#ef4444", weight: 3, dashArray: '6, 6' }).addTo(map);
+    });
+
+    map.on('mousemove', function(e) {
+      if (!isWindowSelecting || !windowStartLatLng) return;
+      windowRectangle.setBounds(L.latLngBounds(windowStartLatLng, e.latlng));
+    });
+
+    map.on('mouseup', function(e) {
+      if (!isWindowSelecting || !windowStartLatLng) return;
+      selectedPrintBounds = L.latLngBounds(windowStartLatLng, e.latlng);
+      isWindowSelecting = false; windowStartLatLng = null;
+      map.dragging.enable();
+      document.getElementById('map').classList.remove('window-select-active');
+      document.getElementById('window-confirm-bar').style.display = 'flex';
+    });
+
+    function proceedToPrintWindow() {
+      document.getElementById('window-confirm-bar').style.display = 'none';
+      if (selectedPrintBounds) map.fitBounds(selectedPrintBounds);
+      setTimeout(() => { window.print(); if (windowRectangle) map.removeLayer(windowRectangle); }, 600);
+    }
+
+    function cancelWindowPrint() {
+      isWindowSelecting = false; map.dragging.enable();
+      document.getElementById('map').classList.remove('window-select-active');
+      document.getElementById('window-confirm-bar').style.display = 'none';
+      if (windowRectangle) map.removeLayer(windowRectangle);
+    }
+
+    function executeFullDisplayPrint() { closePrintModal(); setTimeout(() => { window.print(); }, 500); }
+    function openEmailModal() { document.getElementById('email-modal').style.display = 'flex'; }
+    function closeEmailModal() { document.getElementById('email-modal').style.display = 'none'; }
+    function sendEmailSubmit() {
+      const email = document.getElementById('email-to').value;
+      if (!email) return;
+      window.location.href = `mailto:${email}?subject=خروجی نقشه&body=مرکز: ${currentCenterLat},${currentCenterLng}`;
+      closeEmailModal();
+    }
+
+    let searchDebounce = null;
+    function handleSmartSearch(query) {
+      clearTimeout(searchDebounce);
+      const sugBox = document.getElementById('search-suggestions');
+      if (!query.trim()) { sugBox.style.display = 'none'; return; }
+
+      searchDebounce = setTimeout(() => {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ir&limit=5`)
+          .then(res => res.json())
+          .then(data => {
+            sugBox.innerHTML = '';
+            if (data && data.length > 0) {
+              sugBox.style.display = 'block';
+              data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerText = item.display_name;
+                div.onclick = function() {
+                  const placeName = item.display_name.split(',')[0];
+                  document.getElementById('search-input').value = placeName;
+                  document.getElementById('current-place-name').innerText = placeName;
+                  currentCenterLat = parseFloat(item.lat);
+                  currentCenterLng = parseFloat(item.lon);
+                  map.flyTo([currentCenterLat, currentCenterLng], 14);
+                  addPointToMap(currentCenterLat, currentCenterLng, placeName);
+                  sugBox.style.display = 'none';
+                };
+                sugBox.appendChild(div);
+              });
+            } else sugBox.style.display = 'none';
+          }).catch(() => { sugBox.style.display = 'none'; });
+      }, 300);
+    }
+
+    function executeSearch() {
+      const q = document.getElementById('search-input').value;
+      if (q) handleSmartSearch(q);
+    }
+
+    function searchCategory(catName) {
+      document.getElementById('search-input').value = catName;
+      executeSearch();
+    }
+
+    function applyCustomShamsiDate(shamsiStr) {
+      if (!shamsiStr) return;
+      const parts = shamsiStr.split('/');
+      if (parts.length === 3) {
+        const gregYear = parseInt(parts[0]) + 621;
+        document.getElementById('sat-date').value = `${gregYear}-05-15`;
+        changeSatelliteDate(`${gregYear}-05-15`);
+      }
+    }
+
+    function changeSatelliteDate(dateVal) {
+      const year = parseInt(dateVal.split('-')[0]);
+      const label = document.getElementById('date-status-label');
+      if (year < 1990) switchBaseMap('schematic');
+      else if (year < 2012) switchBaseMap('topo3d');
+      else switchBaseMap('googleSat');
+      label.innerText = `(تصاویر سال ${year})`;
+    }
+
+    function fetchHistoricalArchive() {
+      window.open(`https://earth.google.com/web/@${currentCenterLat},${currentCenterLng},35a,1000d,30y,0h,0t,0r`, '_blank');
+  
 </body>
 </html>
