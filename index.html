@@ -2623,5 +2623,23 @@ window.location.href=url;
 setTimeout(()=>{alert('متن مختصات کپی شد ✅\nاگر برنامه ایمیل باز نشد، متن را دستی Paste کن.\nبرای ارسال فایل، اول CSV را دانلود کن و دستی Attach کن چون mailto فایل ضمیمه نمی‌کند.');},500);};
 })();
 </script>
+  <!-- TNX Fix CSV Copy v2.5.2 -->
+<script>
+(function(){
+window._TNX_PTS2 = window._TNX_PTS2 || [];
+window._TNX_LAST2 = null;
+function getMap2(){ try{ if(typeof map!=='undefined'&&map&&map.eachLayer) return map; }catch(e){} return null; }
+function utm2(lat,lon){var a=6378137,f=1/298.257223563,k0=0.9996,e=Math.sqrt(2*f-f*f);var z=Math.floor((lon+180)/6)+1,lon0=(z-1)*6-180+3;var la=lat*Math.PI/180,lo=lon*Math.PI/180,lo0=lon0*Math.PI/180;var N=a/Math.sqrt(1-e*e*Math.sin(la)*Math.sin(la)),T=Math.tan(la)*Math.tan(la),C=(e*e/(1-e*e))*Math.cos(la)*Math.cos(la),A=(lo-lo0)*Math.cos(la);var M=a*((1-e*e/4-3*e*e*e*e/64-5*e*e*e*e*e*e/256)*la-(3*e*e/8+3*e*e*e*e/32+45*e*e*e*e*e*e/1024)*Math.sin(2*la)+(15*e*e*e*e/256+45*e*e*e*e*e*e/1024)*Math.sin(4*la)-(35*e*e*e*e*e*e/3072)*Math.sin(6*la));var x=k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*(e*e/(1-e*e)))*A*A*A*A*A/120)+500000;var y=k0*(M+N*Math.tan(la)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24+(61-58*T+T*T+600*C-330*(e*e/(1-e*e)))*A*A*A*A*A*A/720));return{x:x,y:y,z:z};}
+function hook(){var m=getMap2();if(m&&!m._tnx2){m._tnx2=true;m.on('click',function(e){window._TNX_LAST2={lat:e.latlng.lat,lng:e.latlng.lng};window._TNX_PTS2.push({lat:e.latlng.lat,lng:e.latlng.lng});try{var el=document.getElementById('tnxDrawLog');if(el){el.textContent+='\nSAVE '+e.latlng.lat.toFixed(5)+','+e.latlng.lng.toFixed(5)+' ('+window._TNX_PTS2.length+')';el.scrollTop=el.scrollHeight;}}catch(err){}});}}
+setInterval(hook,1000);hook();
+function fromMap(){var m=getMap2();if(!m)return[];var a=[];try{m.eachLayer(function(l){try{if(l&&typeof l.getLatLng==='function'){var ll=l.getLatLng();if(ll&&typeof ll.lat==='number'&&isFinite(ll.lat)){a.push({lat:ll.lat,lng:ll.lng});}}}catch(e){}});}catch(e){}return a;}
+function allPts(){var a=window._TNX_PTS2.slice();var b=fromMap();b.forEach(function(p){var dup=false;for(var i=0;i<a.length;i++){if(Math.abs(a[i].lat-p.lat)<0.000001&&Math.abs(a[i].lng-p.lng)<0.000001){dup=true;break;}}if(!dup)a.push(p);});return a;}
+function dl(n,c){var b=new Blob([c],{type:'text/csv;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},500);}
+async function copyT(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e2){}ta.remove();return true;}catch(e2){prompt('کپی کن:',t);return true;}}}
+window.TNX_D_csv=function(){var pts=allPts();if(!pts.length){alert('نقطه‌ای پیدا نشد. اول برو نقشه هوشمند و 2-3 بار روی نقشه کلیک کن. بعد دوباره CSV بزن.');return;}var c='﻿Name,X_UTM,Y_UTM,Lat,Lng\n';pts.forEach(function(p,i){var u=utm2(p.lat,p.lng);c+='P'+(i+1)+','+u.x.toFixed(2)+','+u.y.toFixed(2)+','+p.lat.toFixed(6)+','+p.lng.toFixed(6)+'\n';});dl('TerraNexa.csv',c);alert(pts.length+' نقطه ذخیره شد ✅');};
+window.TNX_D_copyLast=async function(){var ll=window._TNX_LAST2;if(!ll){var a=allPts();if(a.length)ll=a[a.length-1];}if(!ll){alert('اول روی نقشه کلیک کن');return;}var u=utm2(ll.lat,ll.lng);var t=u.x.toFixed(3)+','+u.y.toFixed(3)+',0';await copyT(t);alert('کپی شد:\n'+t);};
+window.TNX_D_copyAll=async function(){var pts=allPts();if(!pts.length){alert('نقطه‌ای نیست. اول روی نقشه کلیک کن.');return;}var t=pts.map(function(p,i){var u=utm2(p.lat,p.lng);return 'P'+(i+1)+': '+u.x.toFixed(2)+','+u.y.toFixed(2)+',0';}).join('\n');await copyT(t);prompt('همه نقاط کپی شد:',t);};
+})();
+</script>
  </body>
 </html>
