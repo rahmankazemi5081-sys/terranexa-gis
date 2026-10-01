@@ -2,480 +2,251 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TerraNexa GIS | مدیریت هوشمند پروژه</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TerraNexa GIS | سامانه مدیریت هوشمند پروژه‌ها</title>
 
+<!-- استایل‌ها و فونت -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
 
 <style>
 :root{
-  --bg:#eef4fb;
-  --card:#ffffff;
-  --text:#102033;
-  --muted:#6b7c93;
-  --line:#dbe5f0;
-  --blue:#2563eb;
-  --cyan:#11c5c6;
-  --dark:#07192d;
-  --green:#16a34a;
-  --red:#e11d48;
-  --orange:#f59e0b;
+  --p:#148dff;--p-dark:#0b6cd0;--s:#15d1ba;--d:#ff546f;--ok:#27c38a;--warn:#ff9f38;
+  --bg:#f2f6fb;--card:#ffffff;--c2:#f7faff;--t:#15243a;--m:#6c7e95;--l:#e1e9f2;
+  --side:#071426;--shadow:0 10px 30px rgba(18,38,63,.08);
+}
+body.dark{
+  --bg:#06101f;--card:#0d1b2d;--c2:#12233a;--t:#eaf3ff;--m:#8fa3bb;--l:#1f344d;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Tahoma,Arial,sans-serif;
-}
-button,input,select,textarea{font-family:inherit}
+body{margin:0;font-family:Tahoma,Arial,sans-serif;background:var(--bg);color:var(--t);transition:.2s}
+button,input,select,textarea{font:inherit}
 button{cursor:pointer}
-.hidden{display:none!important}
-.layout{display:flex;min-height:100vh}
-.sidebar{
-  width:255px;
-  background:var(--dark);
-  color:#fff;
-  padding:18px 14px;
-  position:fixed;
-  right:0;
-  top:0;
-  bottom:0;
-  z-index:1000;
-}
-.brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding-bottom:18px;
-  border-bottom:1px solid rgba(255,255,255,.1);
-}
-.logo{
-  width:45px;
-  height:45px;
-  border-radius:15px;
-  display:grid;
-  place-items:center;
-  background:linear-gradient(135deg,var(--blue),var(--cyan));
-  font-size:24px;
-}
-.brand b{font-size:17px}
-.brand small{display:block;color:#a8bed6;font-size:10px;margin-top:4px}
-.nav-title{
-  font-size:11px;
-  color:#7890aa;
-  margin:18px 10px 8px;
-}
-.nav{
-  width:100%;
-  border:0;
-  background:transparent;
-  color:#c7d7e8;
-  text-align:right;
-  padding:12px 13px;
-  border-radius:12px;
-  margin:4px 0;
-  font-size:14px;
-}
-.nav:hover,.nav.active{
-  background:#123f72;
-  color:#fff;
-}
-.main{
-  margin-right:255px;
-  width:calc(100% - 255px);
-  min-height:100vh;
-}
-.topbar{
-  height:70px;
-  background:var(--card);
-  border-bottom:1px solid var(--line);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:0 18px;
-  position:sticky;
-  top:0;
-  z-index:500;
-}
-.topbar h2{
-  margin:0;
-  font-size:18px;
-}
+.hide{display:none!important}
+
+/* دکمه‌ها و فرم‌ها */
+.btn{border:0;border-radius:11px;padding:9px 15px;font-weight:600;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--p),#5865f2);color:#fff;transition:.15s}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.soft{background:var(--c2);color:var(--t);border:1px solid var(--l)}
+.btn.red{background:var(--d);color:#fff}
+.btn.sm{padding:5px 9px;font-size:12px;border-radius:8px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--l);border-radius:10px;background:var(--c2);color:var(--t);outline:0}
+input:focus,select:focus,textarea:focus{border-color:var(--p)}
+label{font-size:12px;font-weight:bold;margin:10px 0 5px;display:block}
+
+/* لایه ورود و احراز هویت */
+#authLayer{position:fixed;inset:0;z-index:999999;background:radial-gradient(circle at 20% 20%,rgba(21,209,186,.2),transparent 35%),radial-gradient(circle at 80% 80%,rgba(20,141,255,.25),transparent 40%),linear-gradient(145deg,#061221,#0a223a);display:grid;place-items:center;padding:16px;color:#15243a}
+.auth-box{width:min(420px,100%);background:#fff;border-radius:20px;padding:26px;box-shadow:0 25px 70px rgba(0,0,0,.45);direction:rtl}
+.auth-tabs{display:flex;gap:6px;background:#f2f6fb;padding:4px;border-radius:12px;margin:16px 0}
+.auth-tabs button{flex:1;border:0;background:transparent;padding:8px;border-radius:9px;font-weight:bold;color:var(--m)}
+.auth-tabs button.on{background:#fff;color:var(--p);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.auth-msg{font-size:12px;line-height:1.8;min-height:20px;margin-top:10px;color:var(--d)}
+.auth-msg.ok{color:var(--ok)}
+
+/* نوار کناری */
+.sidebar{position:fixed;top:0;bottom:0;right:0;width:245px;background:var(--side);color:#fff;padding:18px 12px;z-index:1000;overflow:auto;transition:.25s}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 20px;font-weight:bold;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--p),var(--s));display:grid;place-items:center;font-size:22px;color:#fff}
+.brand small{display:block;font-size:10px;color:#8ba3bc;font-weight:normal}
+.nav-t{color:#647d97;font-size:10px;font-weight:bold;margin:18px 10px 6px}
+.nav{display:flex;align-items:center;gap:9px;width:100%;border:0;text-align:right;background:transparent;color:#9eb3c7;padding:11px 13px;border-radius:11px;margin:3px 0;font-size:13px}
+.nav:hover,.nav.on{background:linear-gradient(90deg,rgba(20,141,255,.26),rgba(21,209,186,.08));color:#fff}
+.nav.on{border-right:3px solid var(--s)}
+
+/* بدنه اصلی و هدر */
+.main{margin-right:245px;min-height:100vh}
+.topbar{height:66px;position:sticky;top:0;z-index:900;background:var(--card);border-bottom:1px solid var(--l);display:flex;align-items:center;gap:11px;padding:0 20px}
 .grow{flex:1}
-.search-top{
-  display:flex;
-  gap:7px;
-  max-width:420px;
-  width:100%;
-}
-input,select,textarea{
-  border:1px solid var(--line);
-  border-radius:11px;
-  padding:10px 12px;
-  background:#fff;
-  color:var(--text);
-  outline:none;
-  width:100%;
-}
-input:focus,select:focus,textarea:focus{
-  border-color:var(--blue);
-}
-.btn{
-  border:0;
-  border-radius:11px;
-  padding:10px 15px;
-  background:linear-gradient(135deg,var(--blue),#625cff);
-  color:#fff;
-  font-weight:bold;
-}
-.btn.soft{
-  background:#f8fafc;
-  color:var(--text);
-  border:1px solid var(--line);
-}
-.btn.red{background:var(--red)}
-.btn.small{
-  padding:6px 10px;
-  font-size:12px;
-}
-.page{
-  display:none;
-  padding:22px;
-}
-.page.active{display:block}
-.notice{
-  margin-bottom:18px;
-  padding:12px 15px;
-  background:#fff7e6;
-  color:#8a5200;
-  border:1px solid #fde7bd;
-  border-radius:13px;
-  font-size:13px;
-  line-height:1.8;
-}
-.head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-bottom:18px;
-}
-.head h1{
-  margin:0 0 6px;
-  font-size:24px;
-}
-.head p{
-  margin:0;
-  color:var(--muted);
-  font-size:13px;
-}
-.stats{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:14px;
-  margin-bottom:18px;
-}
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:18px;
-  box-shadow:0 8px 25px rgba(20,40,70,.08);
-}
-.stat{
-  padding:18px;
-}
-.stat span{
-  color:var(--muted);
-  font-size:12px;
-}
-.stat b{
-  display:block;
-  margin-top:8px;
-  font-size:28px;
-}
-.grid{
-  display:grid;
-  grid-template-columns:1.2fr 1fr;
-  gap:16px;
-}
-.card-title{
-  padding:15px 18px;
-  border-bottom:1px solid var(--line);
-  font-weight:bold;
-}
-.list{
-  padding:5px 18px;
-}
-.item{
-  padding:12px 0;
-  border-bottom:1px solid var(--line);
-  font-size:13px;
-}
-.item:last-child{border-bottom:0}
-.item small{
-  display:block;
-  color:var(--muted);
-  margin-top:5px;
-}
-.table-wrap{overflow:auto}
-table{
-  width:100%;
-  min-width:720px;
-  border-collapse:collapse;
-}
-th,td{
-  padding:13px 14px;
-  border-bottom:1px solid var(--line);
-  text-align:right;
-  font-size:13px;
-}
-th{
-  background:#f8fafc;
-  color:var(--muted);
-}
-.tag{
-  padding:4px 10px;
-  border-radius:20px;
-  font-size:11px;
-  font-weight:bold;
-}
-.tag.active{background:#dcfce7;color:#15803d}
-.tag.pending{background:#fef3c7;color:#b45309}
-.tag.paused{background:#ffe4e6;color:#be123c}
-.tag.completed{background:#dbeafe;color:#1d4ed8}
-.progress{
-  display:inline-block;
-  width:80px;
-  height:8px;
-  background:#e5e7eb;
-  border-radius:20px;
-  overflow:hidden;
-  vertical-align:middle;
-}
-.progress i{
-  display:block;
-  height:100%;
-  background:linear-gradient(90deg,var(--blue),var(--cyan));
-}
-.filters{
-  display:flex;
-  gap:8px;
-  padding:14px;
-  flex-wrap:wrap;
-}
-.filters>*{
-  flex:1;
-  min-width:150px;
-}
-.empty{
-  padding:30px;
-  text-align:center;
-  color:var(--muted);
-}
-.map-card{
-  height:calc(100vh - 145px);
-  min-height:560px;
-  position:relative;
-  overflow:hidden;
-  border-radius:18px;
-}
-#map{
-  position:absolute;
-  inset:0;
-  z-index:1;
-  direction:ltr;
-}
-.map-search{
-  position:absolute;
-  z-index:400;
-  top:14px;
-  right:65px;
-  left:65px;
-  max-width:540px;
-  margin:auto;
-  display:flex;
-  gap:7px;
-}
-.map-search input{
-  background:#fff;
-  box-shadow:0 5px 20px rgba(0,0,0,.18);
-}
-.map-tools{
-  position:absolute;
-  z-index:400;
-  bottom:18px;
-  right:18px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.map-info{
-  position:absolute;
-  z-index:400;
-  bottom:18px;
-  left:18px;
-  max-width:280px;
-  background:#fff;
-  border-radius:13px;
-  padding:12px 14px;
-  box-shadow:0 5px 20px rgba(0,0,0,.18);
-  font-size:12px;
-  line-height:1.8;
-}
-.leaflet-popup-content{
-  direction:rtl;
-  text-align:right;
-  font-family:Tahoma,Arial,sans-serif;
-  line-height:1.8;
-}
-.modal{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.65);
-  z-index:99999;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:15px;
-}
-.modal-card{
-  width:min(580px,100%);
-  max-height:92vh;
-  overflow:auto;
-  background:#fff;
-  color:#111827;
-  border-radius:20px;
-  padding:22px;
-  box-shadow:0 25px 70px rgba(0,0,0,.35);
-}
-.modal-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:15px;
-}
-.modal-head h2{
-  margin:0;
-  font-size:20px;
-}
-.field{
-  margin-bottom:12px;
-}
-.field label{
-  display:block;
-  font-size:13px;
-  font-weight:bold;
-  margin-bottom:6px;
-}
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-.mobile{display:none}
-@media(max-width:900px){
-  .sidebar{
-    transform:translateX(100%);
-    transition:.25s;
-  }
-  .sidebar.open{
-    transform:none;
-  }
-  .main{
-    margin-right:0;
-    width:100%;
-  }
-  .mobile{display:inline-block}
-  .stats{grid-template-columns:1fr 1fr}
-  .grid{grid-template-columns:1fr}
-}
-@media(max-width:600px){
+.user-badge{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--m);background:var(--c2);padding:5px 10px;border-radius:12px;border:1px solid var(--l)}
+.av{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--p),var(--s));color:#fff;display:grid;place-items:center;font-weight:bold}
+.page{display:none;padding:20px}
+.page.on{display:block}
+.p-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.p-head h1{font-size:22px;margin:0 0 4px}
+.p-head p{font-size:12px;color:var(--m);margin:0}
+
+/* کارت‌ها، جداول و آمار */
+.card{background:var(--card);border:1px solid var(--l);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}
+.stat{padding:18px}
+.stat span{font-size:12px;color:var(--m)}
+.stat b{display:block;font-size:27px;margin-top:8px}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:15px}
+.ct{padding:14px 18px;border-bottom:1px solid var(--l);font-weight:bold;font-size:14px}
+.list{padding:6px 18px}
+.li{padding:12px 0;border-bottom:1px solid var(--l);font-size:13px}
+.li:last-child{border:0}
+.li small{display:block;color:var(--m);margin-top:4px}
+.tw{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:680px}
+th,td{padding:12px 14px;border-bottom:1px solid var(--l);text-align:right;font-size:12px}
+th{background:var(--c2);color:var(--m);font-weight:600}
+.tag{padding:4px 9px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap}
+.tag.active{background:#e3f7ee;color:#14865e}
+.tag.pending{background:#fff1dd;color:#aa6814}
+.tag.paused{background:#ffebee;color:#cb4357}
+.tag.completed{background:#e8f2ff;color:#1675d0}
+.progress{display:inline-block;width:75px;height:7px;background:var(--l);border-radius:8px;overflow:hidden;vertical-align:middle}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--p),var(--s))}
+.filters{display:flex;gap:8px;padding:12px;flex-wrap:wrap}
+.filters>*{flex:1;min-width:145px}
+.empty{padding:30px;text-align:center;color:var(--m);font-size:13px}
+
+/* نقشه هوشمند */
+.map-wrap{position:relative;height:calc(100vh - 120px);min-height:480px}
+#map{position:absolute;inset:0;direction:ltr}
+.map-search{position:absolute;z-index:500;top:12px;right:60px;left:60px;max-width:480px;margin:auto;display:flex;gap:6px}
+.map-search input{background:var(--card);box-shadow:var(--shadow)}
+.map-tools{position:absolute;z-index:500;bottom:20px;right:14px;display:flex;flex-direction:column;gap:7px}
+.map-info{position:absolute;z-index:500;bottom:20px;left:14px;max-width:280px;padding:11px 14px;background:var(--card);border-radius:12px;box-shadow:var(--shadow);font-size:11px;line-height:1.8}
+.leaflet-popup-content{direction:rtl;text-align:right;font-family:Tahoma;line-height:1.8}
+
+/* مودال فرم ثبت پروژه */
+.modal{position:fixed;inset:0;background:rgba(3,10,20,.65);z-index:99999;display:grid;place-items:center;padding:16px}
+.m-card{width:min(550px,100%);max-height:92vh;overflow:auto;padding:22px;background:var(--card);border-radius:18px;box-shadow:0 25px 80px rgba(0,0,0,.35)}
+.m-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.m-head h2{margin:0;font-size:18px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;bottom:20px;left:50%;z-index:100000;transform:translate(-50%,100px);opacity:0;background:#0d2035;color:#fff;padding:12px 20px;border-radius:12px;font-size:12px;transition:.25s;box-shadow:var(--shadow)}
+.toast.show{transform:translate(-50%,0);opacity:1}
+.mobile-btn{display:none}
+
+@media(max-width:850px){
+  .sidebar{transform:translateX(100%)}.sidebar.open{transform:none}
+  .main{margin-right:0}.mobile-btn{display:inline-block}
+  .stats{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}
   .row{grid-template-columns:1fr}
-  .search-top{display:none}
-  .map-card{height:560px}
 }
 </style>
 </head>
 
 <body>
 
+<!-- لایه احراز هویت و ورود -->
+<div id="authLayer">
+  <div class="auth-box">
+    <div style="font-size:13px;color:var(--p);font-weight:bold">⌖ TerraNexa GIS</div>
+    <h2 style="margin:6px 0 10px">ورود به سامانه مدیریت</h2>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="on" onclick="setAuthTab('login')">ورود</button>
+      <button id="tabRegister" onclick="setAuthTab('register')">ثبت‌نام جدید</button>
+    </div>
+
+    <!-- فرم ورود -->
+    <form id="fLogin" onsubmit="handleLogin(event)">
+      <label>ایمیل</label>
+      <input id="lEmail" type="email" required placeholder="name@company.com">
+      <label>رمز عبور</label>
+      <input id="lPass" type="password" required placeholder="••••••••">
+      <div id="lMsg" class="auth-msg"></div>
+      <button class="btn" style="width:100%;margin-top:10px">ورود به داشبورد</button>
+    </form>
+
+    <!-- فرم ثبت نام -->
+    <form id="fRegister" class="hide" onsubmit="handleRegister(event)">
+      <label>نام و نام خانوادگی</label>
+      <input id="rName" required placeholder="مثال: رحمان کاظمی">
+      <label>ایمیل</label>
+      <input id="rEmail" type="email" required placeholder="name@company.com">
+      <label>رمز عبور (حداقل ۶ کاراکتر)</label>
+      <input id="rPass" type="password" minlength="6" required placeholder="••••••••">
+      <div id="rMsg" class="auth-msg"></div>
+      <button class="btn" style="width:100%;margin-top:10px">ثبت‌نام و ارسال برای تأیید</button>
+    </form>
+
+    <!-- حالت منتظر تأیید مدیر -->
+    <div id="boxPending" class="hide" style="text-align:center;padding:15px 0">
+      <div style="font-size:45px">⏳</div>
+      <h3 style="margin:10px 0">حساب شما در انتظار تأیید مدیر است</h3>
+      <p style="font-size:12px;color:var(--m);line-height:1.8">ثبت‌نام شما انجام شده است. پس از تأیید مدیر سامانه، دسترسی شما فعال می‌شود.</p>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:15px">
+        <button class="btn" onclick="checkAuthSession()">بررسی مجدد</button>
+        <button class="btn soft" onclick="handleLogout()">خروج</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- نوار کناری (Sidebar) -->
 <aside class="sidebar" id="sidebar">
   <div class="brand">
     <div class="logo">⌖</div>
-    <div>
-      <b>TerraNexa GIS</b>
-      <small>مدیریت هوشمند پروژه</small>
-    </div>
+    <div>TerraNexa GIS<small>سامانه مدیریت پروژه‌ها</small></div>
   </div>
 
-  <div class="nav-title">سامانه</div>
-  <button class="nav active" onclick="goPage('dashboard',this)">▦ داشبورد</button>
-  <button class="nav" onclick="goPage('mapPage',this)">🛰️ نقشه هوشمند</button>
-  <button class="nav" onclick="goPage('projectsPage',this)">📋 پروژه‌ها</button>
-  <button class="nav" onclick="goPage('filesPage',this)">📁 فایل‌ها</button>
-  <button class="nav" onclick="goPage('reportsPage',this)">▤ گزارش‌ها</button>
+  <div class="nav-t">سامانه</div>
+  <button class="nav on" data-p="dashboard" onclick="switchPage('dashboard',this)">▦　داشبورد</button>
+  <button class="nav" data-p="map" onclick="switchPage('map',this)">🛰️　نقشه هوشمند</button>
+  <button class="nav" data-p="projects" onclick="switchPage('projects',this)">📋　پروژه‌ها</button>
+  <button class="nav" data-p="files" onclick="switchPage('files',this)">📁　فایل‌های مهندسی</button>
+  <button class="nav" data-p="reports" onclick="switchPage('reports',this)">▤　گزارش کلی</button>
+
+  <div class="nav-t adm hide">مدیریت کل</div>
+  <button class="nav adm hide" data-p="users" onclick="switchPage('users',this)">👥　کاربران و ورودها</button>
 </aside>
 
-<main class="main">
+<!-- بدنه اصلی -->
+<div class="main">
   <header class="topbar">
-    <button class="btn soft mobile" onclick="toggleMenu()">☰</button>
-    <h2 id="pageTitle">داشبورد</h2>
+    <button class="btn soft sm mobile-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+    <b id="pageTitle" style="font-size:15px">داشبورد</b>
     <div class="grow"></div>
-    <form class="search-top" onsubmit="globalSearch(event)">
-      <input id="topSearch" placeholder="جست‌وجوی پروژه یا شهر">
-      <button class="btn">جست‌وجو</button>
-    </form>
-    <button class="btn soft" onclick="toggleDark()">◐</button>
+    <button class="btn soft sm" onclick="toggleDark()" title="تغییر تم">◐</button>
+    <div class="user-badge">
+      <div class="av" id="uAv">U</div>
+      <span id="uName">کاربر</span>
+    </div>
+    <button class="btn soft sm" onclick="handleLogout()" title="خروج از حساب">خروج</button>
   </header>
 
-  <section id="dashboard" class="page active">
-    <div class="notice">
-      نسخه فعلی بدون خطا و مستقل است. پروژه‌ها در مرورگر ذخیره می‌شوند. بعداً می‌توانیم دیتابیس آنلاین، ورود کاربران و تأیید مدیر را اضافه کنیم.
-    </div>
-
-    <div class="head">
-      <div>
-        <h1>داشبورد مدیریت</h1>
-        <p>نمای کلی پروژه‌های عمرانی و نقشه‌برداری</p>
-      </div>
-      <button class="btn" onclick="openProject()">＋ پروژه جدید</button>
+  <!-- ۱. صفحه داشبورد -->
+  <section id="p-dashboard" class="page on">
+    <div class="p-head">
+      <div><h1 id="welcomeUser">سلام مدیر</h1><p>خلاصه آمار و وضعیت آنلاین پروژه‌ها</p></div>
+      <button class="btn" onclick="openProjectModal()">＋ ثبت پروژه جدید</button>
     </div>
 
     <div class="stats">
       <div class="card stat"><span>کل پروژه‌ها</span><b id="sTotal">۰</b></div>
-      <div class="card stat"><span>فعال</span><b id="sActive">۰</b></div>
+      <div class="card stat"><span>پروژه‌های فعال</span><b id="sActive">۰</b></div>
       <div class="card stat"><span>میانگین پیشرفت</span><b id="sAvg">۰٪</b></div>
-      <div class="card stat"><span>شهرها</span><b id="sCities">۰</b></div>
+      <div class="card stat"><span>فایل‌های ثبت‌شده</span><b id="sFiles">۰</b></div>
     </div>
 
-    <div class="grid">
-      <div class="card">
-        <div class="card-title">آخرین پروژه‌ها</div>
-        <div class="list" id="latestList"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">فعالیت‌ها</div>
-        <div class="list" id="activityList"></div>
-      </div>
+    <div class="grid2">
+      <div class="card"><div class="ct">📋 آخرین پروژه‌های ثبت‌شده</div><div class="list" id="dProjects"></div></div>
+      <div class="card"><div class="ct">📝 فعالیت‌های اخیر سامانه</div><div class="list" id="dActivities"></div></div>
     </div>
   </section>
 
-  <section id="projectsPage" class="page">
-    <div class="head">
-      <div>
-        <h1>پروژه‌ها</h1>
-        <p>ثبت، ویرایش، حذف و مدیریت پروژه‌ها</p>
+  <!-- ۲. صفحه نقشه هوشمند -->
+  <section id="p-map" class="page" style="padding:0">
+    <div class="map-wrap">
+      <div id="map"></div>
+      <form class="map-search" onsubmit="handleMapSearch(event)">
+        <input id="mapQuery" placeholder="جستجوی شهر، مکان یا مختصات (مثال: چابهار)">
+        <button class="btn">🔍</button>
+      </form>
+      <div class="map-tools">
+        <button class="btn" onclick="locateGPS()">📍 موقعیت من</button>
+        <button class="btn" onclick="newProjectFromMap()">＋ پروژه در این موقعیت</button>
+        <button class="btn soft" onclick="clearDrawings()">🗑 پاک‌کردن ترسیمات</button>
       </div>
-      <button class="btn" onclick="openProject()">＋ پروژه جدید</button>
+      <div id="mapInfo" class="map-info">روی نقشه کلیک کنید تا مختصات انتخاب شود یا با ابزار سمت چپ، محدوده و مسیر ترسیم کنید.</div>
     </div>
+  </section>
 
+  <!-- ۳. صفحه پروژه‌ها -->
+  <section id="p-projects" class="page">
+    <div class="p-head">
+      <div><h1>پروژه‌های مهندسی</h1><p>مدیریت، ویرایش و نظارت بر پیشرفت پروژه‌ها در دیتابیس آنلاین</p></div>
+      <button class="btn" onclick="openProjectModal()">＋ ثبت پروژه جدید</button>
+    </div>
     <div class="card">
       <div class="filters">
-        <input id="filterText" placeholder="جست‌وجوی نام یا شهر" oninput="renderProjects()">
-        <select id="filterStatus" onchange="renderProjects()">
+        <input id="pSearch" placeholder="جستجوی نام یا شهر..." oninput="renderProjectsTable()">
+        <select id="pFilterStatus" onchange="renderProjectsTable()">
           <option value="">همه وضعیت‌ها</option>
           <option value="active">فعال</option>
           <option value="pending">در انتظار</option>
@@ -483,2146 +254,737 @@ th{
           <option value="completed">تکمیل‌شده</option>
         </select>
       </div>
-
-      <div class="table-wrap">
+      <div class="tw">
         <table>
-          <thead>
-            <tr>
-              <th>نام پروژه</th>
-              <th>شهر</th>
-              <th>نوع</th>
-              <th>پیشرفت</th>
-              <th>وضعیت</th>
-              <th>عملیات</th>
-            </tr>
-          </thead>
-          <tbody id="projectRows"></tbody>
+          <thead><tr><th>نام پروژه</th><th>نوع</th><th>شهر</th><th>پیشرفت</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+          <tbody id="pRows"></tbody>
         </table>
       </div>
     </div>
   </section>
 
-  <section id="mapPage" class="page">
-    <div class="head">
-      <div>
-        <h1>نقشه هوشمند</h1>
-        <p>نقشه ماهواره‌ای، جست‌وجوی مکان، ترسیم محدوده و ثبت پروژه</p>
+  <!-- ۴. صفحه فایل‌ها -->
+  <section id="p-files" class="page">
+    <div class="p-head"><div><h1>فایل‌های مهندسی</h1><p>آپلود و ذخیره‌سازی ابری فایل‌های DWG، PDF، KML، تصاویر و اسناد</p></div></div>
+    <div class="card" style="padding:16px;margin-bottom:16px">
+      <div class="row">
+        <div>
+          <label>پروژه مقصد *</label>
+          <select id="fileProjSelect"></select>
+        </div>
+        <div>
+          <label>انتخاب فایل‌ها (حداکثر ۵۰ مگابایت)</label>
+          <input id="fileUploadInput" type="file" multiple accept=".pdf,.dwg,.dxf,.kml,.kmz,.zip,.rar,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.txt">
+        </div>
       </div>
+      <button class="btn" style="margin-top:12px" onclick="uploadProjectFiles()">⬆ بارگذاری در فضای ابری</button>
+      <span id="fileUpMsg" style="font-size:12px;margin-right:10px;color:var(--ok)"></span>
     </div>
 
-    <div class="card map-card">
-      <div id="map"></div>
-
-      <form class="map-search" onsubmit="searchMap(event)">
-        <input id="mapSearchInput" placeholder="جست‌وجوی شهر، مکان یا مختصات">
-        <button class="btn">جست‌وجو</button>
-      </form>
-
-      <div class="map-tools">
-        <button class="btn" onclick="locateMe()">📍 موقعیت من</button>
-        <button class="btn" onclick="openProjectFromMap()">＋ پروژه در این موقعیت</button>
-      </div>
-
-      <div class="map-info" id="mapInfo">
-        روی نقشه کلیک کنید یا محدوده رسم کنید، سپس «پروژه در این موقعیت» را بزنید.
-      </div>
-    </div>
-  </section>
-
-  <section id="filesPage" class="page">
-    <div class="head">
-      <div>
-        <h1>فایل‌ها</h1>
-        <p>مرکز مدیریت فایل‌های مهندسی</p>
-      </div>
-    </div>
     <div class="card">
-      <div class="empty">
-        در نسخه بعدی، آپلود فایل‌های PDF، DWG، DXF، KML، KMZ و تصاویر به دیتابیس آنلاین اضافه می‌شود.
+      <div class="ct">لیست فایل‌های پروژه</div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>نام فایل</th><th>پروژه</th><th>حجم</th><th>تاریخ</th><th>عملیات</th></tr></thead>
+          <tbody id="fRows"></tbody>
+        </table>
       </div>
     </div>
   </section>
 
-  <section id="reportsPage" class="page">
-    <div class="head">
-      <div>
-        <h1>گزارش‌ها</h1>
-        <p>گزارش آماری پروژه‌ها</p>
+  <!-- ۵. صفحه گزارش‌ها -->
+  <section id="p-reports" class="page">
+    <div class="p-head"><div><h1>گزارش کلی سیستم</h1><p>خلاصه آمار وضعیت پروژه‌ها</p></div></div>
+    <div class="card"><div class="ct">پروژه‌ها به تفکیک وضعیت</div><div class="list" id="reportStatusList"></div></div>
+  </section>
+
+  <!-- ۶. صفحه مدیریت کاربران (فقط مدیر) -->
+  <section id="p-users" class="page">
+    <div class="p-head">
+      <div><h1>👥 کاربران و ورودها</h1><p>تأیید کاربران جدید، مدیریت سطح دسترسی و گزارش ورودهای سامانه</p></div>
+      <button class="btn soft" onclick="loadAdminData()">↻ بروزرسانی</button>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="ct">لیست کاربران سامانه</div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>وضعیت</th><th>تاریخ ثبت‌نام</th><th>عملیات تأیید</th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
       </div>
     </div>
+
     <div class="card">
-      <div class="card-title">پروژه‌ها بر اساس وضعیت</div>
-      <div class="list" id="reportList"></div>
+      <div class="ct">🔐 سوابق آخرین ورودها</div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>ایمیل کاربر</th><th>زمان ورود</th><th>دستگاه و مرورگر</th></tr></thead>
+          <tbody id="loginRows"></tbody>
+        </table>
+      </div>
     </div>
   </section>
-</main>
+</div>
 
-<div class="modal hidden" id="projectModal">
-  <form class="modal-card" onsubmit="saveProject(event)">
-    <div class="modal-head">
-      <h2 id="modalTitle">ثبت پروژه</h2>
-      <button type="button" class="btn soft small" onclick="closeProject()">بستن</button>
+<!-- مودال ثبت و ویرایش پروژه -->
+<div id="projModal" class="modal hide">
+  <form class="m-card" onsubmit="saveProject(event)">
+    <div class="m-head">
+      <h2 id="mTitle">ثبت پروژه جدید</h2>
+      <button type="button" class="btn soft sm" onclick="closeProjectModal()">✕</button>
     </div>
-
-    <div class="field">
-      <label>نام پروژه</label>
-      <input id="pName" required placeholder="مثلاً پروژه چابهار">
-    </div>
-
-    <div class="field">
-      <label>توضیحات</label>
-      <textarea id="pDesc" rows="3" placeholder="توضیحات پروژه"></textarea>
-    </div>
-
+    <label>نام پروژه *</label>
+    <input id="fName" required placeholder="مثال: کارخانه پتروشیمی چابهار">
+    <label>توضیحات</label>
+    <textarea id="fDesc" rows="3" placeholder="توضیحات تکمیلی پروژه..."></textarea>
     <div class="row">
-      <div class="field">
-        <label>شهر / منطقه</label>
-        <input id="pCity" placeholder="چابهار">
-      </div>
-      <div class="field">
+      <div>
         <label>نوع پروژه</label>
-        <select id="pType">
-          <option>نقشه‌برداری</option>
-          <option>عمرانی</option>
-          <option>صنعتی</option>
-          <option>راه‌سازی</option>
-          <option>ساختمانی</option>
-          <option>GIS</option>
+        <select id="fType">
+          <option value="surveying">نقشه‌برداری</option>
+          <option value="building">ساختمانی</option>
+          <option value="road">راه‌سازی</option>
+          <option value="mining">معدن</option>
+          <option value="industrial">صنعتی</option>
+          <option value="other">سایر</option>
         </select>
       </div>
+      <div><label>شهر</label><input id="fCity" placeholder="مثال: چابهار"></div>
     </div>
-
     <div class="row">
-      <div class="field">
-        <label>وضعیت پروژه</label>
-        <select id="pStatus">
+      <div>
+        <label>وضعیت</label>
+        <select id="fStatus">
           <option value="active">فعال</option>
           <option value="pending">در انتظار</option>
           <option value="paused">متوقف</option>
           <option value="completed">تکمیل‌شده</option>
         </select>
       </div>
-      <div class="field">
-        <label>درصد پیشرفت</label>
-        <input id="pProgress" type="number" min="0" max="100" value="10">
+      <div>
+        <label>پیشرفت: <span id="fProgVal">0</span>٪</label>
+        <input id="fProg" type="range" min="0" max="100" value="0" oninput="document.getElementById('fProgVal').textContent=this.value">
       </div>
     </div>
-
     <div class="row">
-      <div class="field">
-        <label>Lat</label>
-        <input id="pLat" type="number" step="any">
-      </div>
-      <div class="field">
-        <label>Lng</label>
-        <input id="pLng" type="number" step="any">
-      </div>
+      <div><label>عرض جغرافیایی (Lat)</label><input id="fLat" type="number" step="any" placeholder="مثال: 25.29"></div>
+      <div><label>طول جغرافیایی (Lng)</label><input id="fLng" type="number" step="any" placeholder="مثال: 60.64"></div>
     </div>
-
-    <button class="btn" style="width:100%">ذخیره پروژه</button>
+    <div id="mGeoBadge" style="font-size:12px;color:var(--ok);margin:8px 0"></div>
+    <button class="btn" style="width:100%;margin-top:10px">💾 ذخیره در دیتابیس آنلاین</button>
   </form>
 </div>
 
+<!-- توست پیام‌ها -->
+<div id="toast" class="toast"></div>
+
+<!-- کتابخانه‌های خارجی -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
 <script>
-const STORAGE = "terranexa_projects_clean_v1";
-const ACTIVITY = "terranexa_activity_clean_v1";
+/* ==================== تنظیمات دیتابیس ==================== */
+const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
+const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
+const BUCKET_NAME  = "project-files";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let projects = JSON.parse(localStorage.getItem(STORAGE) || "[]");
-let activities = JSON.parse(localStorage.getItem(ACTIVITY) || "[]");
+const ROLES = { admin:"مدیر کل", project_manager:"مدیر پروژه", surveyor:"نقشه‌بردار", supervisor:"ناظر", client:"کارفرما" };
+const STATUS = { active:"فعال", pending:"در انتظار", paused:"متوقف", completed:"تکمیل‌شده" };
+const TYPES  = { surveying:"نقشه‌برداری", building:"ساختمانی", road:"راه‌سازی", mining:"معدن", industrial:"صنعتی", other:"سایر" };
 
-let map = null;
-let markersLayer = null;
-let drawnItems = null;
-let selectedPoint = null;
-let selectedGeoJSON = null;
-let editId = null;
+let currentUser = null;
+let currentProfile = null;
+let allProjects = [];
+let editingProjectId = null;
+let map, markersLayer, shapesLayer, drawnGroup, pickedMarker, pickedLatLng, draftGeometry;
 
-const statusText = {
-  active:"فعال",
-  pending:"در انتظار",
-  paused:"متوقف",
-  completed:"تکمیل‌شده"
-};
+/* ==================== اعلان و توست ==================== */
+function toast(text) {
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 3200);
+}
+function esc(str){ return String(str||"").replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(num){ return Number(num||0).toLocaleString("fa-IR"); }
 
-function saveLocal(){
-  localStorage.setItem(STORAGE, JSON.stringify(projects));
-  localStorage.setItem(ACTIVITY, JSON.stringify(activities.slice(0,20)));
+/* ==================== احراز هویت و مدیریت کاربران ==================== */
+function setAuthTab(mode) {
+  document.getElementById("fLogin").classList.toggle("hide", mode !== "login");
+  document.getElementById("fRegister").classList.toggle("hide", mode !== "register");
+  document.getElementById("tabLogin").classList.toggle("on", mode === "login");
+  document.getElementById("tabRegister").classList.toggle("on", mode === "register");
 }
 
-function fa(n){
-  return Number(n || 0).toLocaleString("fa-IR");
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById("lEmail").value.trim();
+  const password = document.getElementById("lPass").value;
+  const msg = document.getElementById("lMsg");
+  msg.textContent = "در حال ورود..."; msg.className = "auth-msg ok";
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    msg.className = "auth-msg";
+    msg.textContent = error.message.includes("Invalid") ? "ایمیل یا رمز عبور اشتباه است." : error.message;
+    return;
+  }
+  await logLoginEvent(data.user.id, data.user.email);
+  await checkAuthSession();
 }
 
-function safe(v){
-  return String(v || "").replace(/[&<>"']/g, function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+async function handleRegister(e) {
+  e.preventDefault();
+  const name = document.getElementById("rName").value.trim();
+  const email = document.getElementById("rEmail").value.trim();
+  const password = document.getElementById("rPass").value;
+  const msg = document.getElementById("rMsg");
+  msg.textContent = "در حال ثبت‌نام..."; msg.className = "auth-msg ok";
+
+  const { data, error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { full_name: name }, emailRedirectTo: location.href }
   });
-}
 
-function addActivity(text){
-  activities.unshift({
-    text:text,
-    time:new Date().toLocaleString("fa-IR")
-  });
-  activities = activities.slice(0,20);
-  saveLocal();
-}
-
-function toggleMenu(){
-  document.getElementById("sidebar").classList.toggle("open");
-}
-
-function toggleDark(){
-  alert("حالت تاریک در نسخه بعدی کامل‌تر می‌شود.");
-}
-
-function goPage(id, btn){
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-
-  document.querySelectorAll(".nav").forEach(n => n.classList.remove("active"));
-  if(btn) btn.classList.add("active");
-
-  const titles = {
-    dashboard:"داشبورد",
-    mapPage:"نقشه هوشمند",
-    projectsPage:"پروژه‌ها",
-    filesPage:"فایل‌ها",
-    reportsPage:"گزارش‌ها"
-  };
-
-  document.getElementById("pageTitle").innerText = titles[id] || "TerraNexa GIS";
-  document.getElementById("sidebar").classList.remove("open");
-
-  if(id === "mapPage"){
-    setTimeout(function(){
-      if(!map) initMap();
-      else map.invalidateSize();
-    },150);
+  if (error) {
+    msg.className = "auth-msg";
+    msg.textContent = error.message.includes("already") ? "این ایمیل قبلاً ثبت شده است." : error.message;
+    return;
   }
 
-  if(id === "projectsPage") renderProjects();
-  if(id === "reportsPage") renderReports();
+  if (data.session) {
+    await checkAuthSession();
+  } else {
+    msg.textContent = "ثبت‌نام انجام شد! ایمیل تأیید را باز کنید و سپس وارد شوید.";
+  }
 }
 
-function renderDashboard(){
-  document.getElementById("sTotal").innerText = fa(projects.length);
-  document.getElementById("sActive").innerText = fa(projects.filter(p => p.status === "active").length);
+async function logLoginEvent(userId, email) {
+  try {
+    await sb.from("login_events").insert({
+      user_id: userId,
+      email: email,
+      success: true,
+      user_agent: navigator.userAgent
+    });
+  } catch(e){}
+}
 
-  const avg = projects.length ? Math.round(projects.reduce((a,p)=>a + Number(p.progress || 0),0) / projects.length) : 0;
-  document.getElementById("sAvg").innerText = fa(avg) + "٪";
+async function handleLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
 
-  const cities = new Set(projects.map(p => p.city).filter(Boolean));
-  document.getElementById("sCities").innerText = fa(cities.size);
+async function checkAuthSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  const layer = document.getElementById("authLayer");
+  const boxPending = document.getElementById("boxPending");
+  const fLogin = document.getElementById("fLogin");
+  const fRegister = document.getElementById("fRegister");
+  const tabs = document.querySelector(".auth-tabs");
 
-  document.getElementById("latestList").innerHTML = projects.slice(0,6).map(p => `
-    <div class="item">
-      <b>${safe(p.name)}</b>
-      <small>${safe(p.city || "بدون شهر")} - ${safe(p.type)} - پیشرفت ${fa(p.progress)}٪</small>
+  if (!session) {
+    layer.classList.remove("hide");
+    boxPending.classList.add("hide");
+    fLogin.classList.remove("hide");
+    tabs.classList.remove("hide");
+    return;
+  }
+
+  currentUser = session.user;
+  const { data: profile } = await sb.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+  currentProfile = profile || { role: "client", approved: false, full_name: currentUser.email };
+
+  // مدیر کل همواره تأیید است
+  if (currentUser.email === "rahmankazemi5081@gmail.com") {
+    currentProfile.role = "admin";
+    currentProfile.approved = true;
+  }
+
+  if (!currentProfile.approved) {
+    layer.classList.remove("hide");
+    boxPending.classList.remove("hide");
+    fLogin.classList.add("hide");
+    fRegister.classList.add("hide");
+    tabs.classList.add("hide");
+    return;
+  }
+
+  // ورود کامل به سیستم
+  layer.classList.add("hide");
+  initApp();
+}
+
+function initApp() {
+  const isAdmin = currentProfile.role === "admin";
+  document.querySelectorAll(".adm").forEach(el => el.classList.toggle("hide", !isAdmin));
+
+  const displayName = currentProfile.full_name || currentUser.email || "مدیر";
+  document.getElementById("uName").textContent = displayName;
+  document.getElementById("uAv").textContent = (displayName[0]||"U").toUpperCase();
+  document.getElementById("welcomeUser").textContent = "سلام " + displayName + " 👋";
+
+  loadProjects();
+  loadFiles();
+  loadActivities();
+  if (isAdmin) loadAdminData();
+}
+
+/* ==================== تغییر صفحات ==================== */
+function switchPage(pageId, btn) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("on"));
+  document.getElementById("p-" + pageId).classList.add("on");
+
+  document.querySelectorAll(".nav").forEach(n => n.classList.remove("on"));
+  if (btn) btn.classList.add("on");
+
+  const titles = { dashboard:"داشبورد مدیریت", map:"نقشه هوشمند پروژه‌ها", projects:"مدیریت پروژه‌ها", files:"فایل‌های مهندسی", reports:"گزارشات آماری", users:"کاربران و لاگ ورودها" };
+  document.getElementById("pageTitle").textContent = titles[pageId] || "داشبورد";
+  document.getElementById("sidebar").classList.remove("open");
+
+  if (pageId === "map") {
+    setTimeout(() => { if (!map) initMap(); else map.invalidateSize(); }, 150);
+  }
+}
+
+/* ==================== پروژه‌ها (Supabase CRUD) ==================== */
+async function loadProjects() {
+  const { data, error } = await sb.from("projects").select("*").order("created_at", { ascending: false });
+  if (error) { toast("خطا در بارگذاری پروژه‌ها: " + error.message); return; }
+
+  allProjects = data || [];
+  renderDashboardStats();
+  renderProjectsTable();
+  fillProjectDropdowns();
+  if (map) renderMapFeatures();
+}
+
+function renderDashboardStats() {
+  document.getElementById("sTotal").textContent = fmt(allProjects.length);
+  document.getElementById("sActive").textContent = fmt(allProjects.filter(p => p.status === "active").length);
+  const avg = allProjects.length ? Math.round(allProjects.reduce((a, b) => a + Number(b.progress || 0), 0) / allProjects.length) : 0;
+  document.getElementById("sAvg").textContent = fmt(avg) + "٪";
+
+  document.getElementById("dProjects").innerHTML = allProjects.slice(0, 5).map(p => `
+    <div class="li">
+      <b>${esc(p.name)}</b> <span class="tag ${p.status}">${STATUS[p.status]||p.status}</span>
+      <small>${esc(TYPES[p.project_type]||p.project_type)} • ${esc(p.city||"—")} • پیشرفت ${fmt(p.progress)}٪</small>
     </div>
   `).join("") || `<div class="empty">هنوز پروژه‌ای ثبت نشده است.</div>`;
 
-  document.getElementById("activityList").innerHTML = activities.slice(0,8).map(a => `
-    <div class="item">
-      ${safe(a.text)}
-      <small>${safe(a.time)}</small>
-    </div>
-  `).join("") || `<div class="empty">فعالیتی ثبت نشده است.</div>`;
+  // آمار گزارش‌ها
+  const stCount = { active:0, pending:0, paused:0, completed:0 };
+  allProjects.forEach(p => { if (stCount[p.status] !== undefined) stCount[p.status]++; });
+  document.getElementById("reportStatusList").innerHTML = Object.entries(STATUS).map(([k, v]) => `
+    <div class="li">${v} <span style="float:left;color:var(--m)">${fmt(stCount[k])} پروژه</span></div>
+  `).join("");
 }
 
-function renderProjects(){
-  const q = (document.getElementById("filterText")?.value || "").trim().toLowerCase();
-  const s = document.getElementById("filterStatus")?.value || "";
+function renderProjectsTable() {
+  const query = (document.getElementById("pSearch")?.value || "").trim().toLowerCase();
+  const status = document.getElementById("pFilterStatus")?.value || "";
 
-  const list = projects.filter(p => {
-    const text = (p.name + " " + p.city + " " + p.type).toLowerCase();
-    return (!q || text.includes(q)) && (!s || p.status === s);
-  });
+  const list = allProjects.filter(p => (!query || (p.name + " " + (p.city||"")).toLowerCase().includes(query)) && (!status || p.status === status));
 
-  document.getElementById("projectRows").innerHTML = list.map(p => `
+  document.getElementById("pRows").innerHTML = list.map(p => `
     <tr>
-      <td><b>${safe(p.name)}</b></td>
-      <td>${safe(p.city || "—")}</td>
-      <td>${safe(p.type)}</td>
+      <td><b>${esc(p.name)}</b><br><small style="color:var(--m)">${esc((p.description||"").slice(0,55))}</small></td>
+      <td>${esc(TYPES[p.project_type]||p.project_type)}</td>
+      <td>${esc(p.city||"—")}</td>
+      <td><span class="progress"><i style="width:${p.progress}%"></i></span> ${fmt(p.progress)}٪</td>
+      <td><span class="tag ${p.status}">${STATUS[p.status]||p.status}</span></td>
       <td>
-        <span class="progress"><i style="width:${p.progress}%"></i></span>
-        ${fa(p.progress)}٪
-      </td>
-      <td><span class="tag ${safe(p.status)}">${statusText[p.status] || "فعال"}</span></td>
-      <td>
-        ${p.lat && p.lng ? `<button class="btn soft small" onclick="showOnMap('${p.id}')">نقشه</button>` : ""}
-        <button class="btn soft small" onclick="editProject('${p.id}')">ویرایش</button>
-        <button class="btn red small" onclick="deleteProject('${p.id}')">حذف</button>
+        ${p.latitude != null ? `<button class="btn soft sm" onclick="zoomProjectOnMap('${p.id}')">🗺 نقشه</button> ` : ""}
+        <button class="btn soft sm" onclick="openProjectModal('${p.id}')">✏ ویرایش</button>
+        <button class="btn red sm" onclick="deleteProject('${p.id}')">🗑</button>
       </td>
     </tr>
-  `).join("") || `<tr><td colspan="6" class="empty">پروژه‌ای یافت نشد.</td></tr>`;
+  `).join("") || `<tr><td colspan="6" class="empty">پروژه‌ای پیدا نشد.</td></tr>`;
 }
 
-function renderReports(){
-  const keys = ["active","pending","paused","completed"];
-  document.getElementById("reportList").innerHTML = keys.map(k => {
-    const count = projects.filter(p => p.status === k).length;
-    return `<div class="item">${statusText[k]}<small>${fa(count)} پروژه</small></div>`;
+function openProjectModal(id = null, lat = null, lng = null, geo = null) {
+  editingProjectId = id;
+  const p = id ? allProjects.find(x => x.id === id) : null;
+
+  document.getElementById("mTitle").textContent = p ? "ویرایش پروژه" : "ثبت پروژه جدید";
+  document.getElementById("fName").value = p ? p.name : "";
+  document.getElementById("fDesc").value = p ? p.description : "";
+  document.getElementById("fType").value = p ? p.project_type : "surveying";
+  document.getElementById("fCity").value = p ? p.city : "";
+  document.getElementById("fStatus").value = p ? p.status : "active";
+  document.getElementById("fProg").value = p ? p.progress : 0;
+  document.getElementById("fProgVal").textContent = document.getElementById("fProg").value;
+
+  document.getElementById("fLat").value = lat ?? (p?.latitude ?? "");
+  document.getElementById("fLng").value = lng ?? (p?.longitude ?? "");
+
+  draftGeometry = geo ?? (p?.geojson ?? null);
+  document.getElementById("mGeoBadge").textContent = draftGeometry?.features?.length ? `✅ عارضه ترسیم‌شده (${fmt(draftGeometry.features.length)} شکل) پیوست شد.` : "";
+
+  document.getElementById("projModal").classList.remove("hide");
+}
+
+function closeProjectModal() {
+  document.getElementById("projModal").classList.add("hide");
+  editingProjectId = null;
+}
+
+async function saveProject(e) {
+  e.preventDefault();
+  const latVal = document.getElementById("fLat").value.trim();
+  const lngVal = document.getElementById("fLng").value.trim();
+
+  let lat = latVal === "" ? null : Number(latVal);
+  let lng = lngVal === "" ? null : Number(lngVal);
+
+  if ((lat === null || lng === null) && draftGeometry?.features?.length && window.L) {
+    try {
+      const c = L.geoJSON(draftGeometry).getBounds().getCenter();
+      lat = +c.lat.toFixed(6); lng = +c.lng.toFixed(6);
+    } catch(err){}
+  }
+
+  const row = {
+    name: document.getElementById("fName").value.trim(),
+    description: document.getElementById("fDesc").value.trim(),
+    project_type: document.getElementById("fType").value,
+    city: document.getElementById("fCity").value.trim(),
+    status: document.getElementById("fStatus").value,
+    progress: Number(document.getElementById("fProg").value),
+    latitude: lat,
+    longitude: lng,
+    geojson: draftGeometry,
+    updated_at: new Date().toISOString()
+  };
+
+  let res;
+  if (editingProjectId) {
+    res = await sb.from("projects").update(row).eq("id", editingProjectId).select().single();
+  } else {
+    res = await sb.from("projects").insert({ ...row, owner_id: currentUser.id }).select().single();
+  }
+
+  if (res.error) {
+    toast("خطا در ذخیره پروژه: " + res.error.message);
+    return;
+  }
+
+  toast("پروژه با موفقیت در دیتابیس ذخیره شد ✅");
+  logActivity((editingProjectId ? "ویرایش پروژه: " : "ایجاد پروژه: ") + row.name);
+  closeProjectModal();
+  if (drawnGroup) drawnGroup.clearLayers();
+  loadProjects();
+}
+
+async function deleteProject(id) {
+  const p = allProjects.find(x => x.id === id);
+  if (!p || !confirm(`پروژه «${p.name}» حذف شود؟`)) return;
+
+  const { error } = await sb.from("projects").delete().eq("id", id);
+  if (error) { toast("خطا در حذف پروژه: " + error.message); return; }
+
+  toast("پروژه حذف شد.");
+  logActivity("حذف پروژه: " + p.name);
+  loadProjects();
+}
+
+function zoomProjectOnMap(id) {
+  const p = allProjects.find(x => x.id === id);
+  if (!p || p.latitude == null) return;
+  switchPage("map", document.querySelector('[data-p="map"]'));
+  setTimeout(() => map.flyTo([p.latitude, p.longitude], 16), 300);
+}
+
+/* ==================== نقشه هوشمند و ابزارهای ترسیم ==================== */
+function initMap() {
+  if (map) return;
+  map = L.map("map", { zoomControl: false }).setView([32.42, 53.68], 5);
+  L.control.zoom({ position: "topright" }).addTo(map);
+
+  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" });
+  const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Tiles © Esri" }).addTo(map);
+
+  L.control.layers({ "تصویر ماهواره‌ای": satellite, "نقشه خیابانی": streets }, {}, { position: "topright" }).addTo(map);
+  L.control.scale({ imperial: false }).addTo(map);
+
+  markersLayer = L.featureGroup().addTo(map);
+  shapesLayer  = L.featureGroup().addTo(map);
+  drawnGroup   = L.featureGroup().addTo(map);
+
+  // ابزارهای ترسیم خط و محدوده
+  const drawControl = new L.Control.Draw({
+    position: "topleft",
+    edit: { featureGroup: drawnGroup },
+    draw: {
+      polygon: { allowIntersection: false, shapeOptions: { color: "#15d1ba" } },
+      polyline: { shapeOptions: { color: "#ff9f38", weight: 4 } },
+      rectangle: { shapeOptions: { color: "#148dff" } },
+      marker: true, circle: false, circlemarker: false
+    }
+  });
+  map.addControl(drawControl);
+
+  map.on(L.Draw.Event.CREATED, e => {
+    drawnGroup.addLayer(e.layer);
+    calcMeasurement(e.layer);
+  });
+  map.on(L.Draw.Event.EDITED, e => e.layers.eachLayer(calcMeasurement));
+
+  map.on("click", e => {
+    pickedLatLng = e.latlng;
+    if (pickedMarker) pickedMarker.setLatLng(e.latlng);
+    else pickedMarker = L.circleMarker(e.latlng, { radius: 7, color: "#fff", fillColor: "#ff546f", fillOpacity: 1, weight: 3 }).addTo(map);
+
+    document.getElementById("mapInfo").innerHTML = `📍 مختصات انتخابی:<br>Lat: <b>${e.latlng.lat.toFixed(6)}</b><br>Lng: <b>${e.latlng.lng.toFixed(6)}</b><br><small>برای ثبت، دکمه «پروژه در این موقعیت» را بزنید.</small>`;
+  });
+
+  renderMapFeatures();
+}
+
+function calcMeasurement(layer) {
+  let txt = "";
+  if (layer instanceof L.Polygon) {
+    const coords = layer.getLatLngs()[0];
+    let area = 0;
+    for (let i = 0; i < coords.length; i++) {
+      let j = (i + 1) % coords.length;
+      area += (coords[i].lng * coords[j].lat) - (coords[j].lng * coords[i].lat);
+    }
+    area = Math.abs(area) * 111319.9 * 111319.9 * Math.cos(coords[0].lat * Math.PI / 180) / 2;
+    txt = "📐 مساحت: <b>" + (area >= 1e6 ? (area/1e6).toFixed(3) + " کیلومتر مربع" : area >= 1e4 ? (area/1e4).toFixed(2) + " هکتار" : area.toFixed(1) + " متر مربع") + "</b>";
+  } else if (layer instanceof L.Polyline) {
+    const pts = layer.getLatLngs(); let len = 0;
+    for (let i = 1; i < pts.length; i++) len += pts[i-1].distanceTo(pts[i]);
+    txt = "📏 طول مسیر: <b>" + (len >= 1000 ? (len/1000).toFixed(3) + " کیلومتر" : len.toFixed(1) + " متر") + "</b>";
+  }
+  if (txt) { layer.bindPopup(txt); document.getElementById("mapInfo").innerHTML = txt; }
+}
+
+function renderMapFeatures() {
+  if (!map || !markersLayer || !shapesLayer) return;
+  markersLayer.clearLayers();
+  shapesLayer.clearLayers();
+
+  allProjects.forEach(p => {
+    const pop = `<b>${esc(p.name)}</b><br>${esc(TYPES[p.project_type]||"")} • ${esc(p.city||"")}<br>وضعیت: ${STATUS[p.status]||p.status}<br>پیشرفت: ${fmt(p.progress)}٪`;
+    if (p.latitude != null && p.longitude != null) {
+      L.marker([p.latitude, p.longitude]).bindPopup(pop).addTo(markersLayer);
+    }
+    if (p.geojson?.features?.length) {
+      try {
+        L.geoJSON(p.geojson, { style: { color: "#148dff", weight: 3, fillOpacity: 0.2 } }).bindPopup(pop).addTo(shapesLayer);
+      } catch(e){}
+    }
+  });
+}
+
+function newProjectFromMap() {
+  let lat = pickedLatLng ? pickedLatLng.lat : null;
+  let lng = pickedLatLng ? pickedLatLng.lng : null;
+  const geo = drawnGroup && drawnGroup.getLayers().length ? drawnGroup.toGeoJSON() : null;
+
+  if (lat == null && geo) {
+    const c = drawnGroup.getBounds().getCenter();
+    lat = c.lat; lng = c.lng;
+  }
+
+  if (lat == null) { toast("ابتدا روی نقشه کلیک کنید یا محدوده رسم کنید."); return; }
+  openProjectModal(null, +lat.toFixed(6), +lng.toFixed(6), geo);
+}
+
+function clearDrawings() {
+  if (drawnGroup) drawnGroup.clearLayers();
+  if (pickedMarker) { map.removeLayer(pickedMarker); pickedMarker = null; }
+  pickedLatLng = null;
+  toast("ترسیمات نقشه پاک شد.");
+}
+
+function locateGPS() {
+  if (!navigator.geolocation) { toast("GPS در دسترس نیست."); return; }
+  toast("در حال دریافت موقعیت ماهواره‌ای...");
+  navigator.geolocation.getCurrentPosition(p => {
+    const ll = L.latLng(p.coords.latitude, p.coords.longitude);
+    map.flyTo(ll, 16);
+    L.circle(ll, { radius: p.coords.accuracy, color: "#15d1ba", fillOpacity: 0.15 }).addTo(map);
+    map.fire("click", { latlng: ll });
+  }, () => toast("دسترسی به موقعیت داده نشد."), { enableHighAccuracy: true });
+}
+
+async function handleMapSearch(e) {
+  e.preventDefault();
+  const q = document.getElementById("mapQuery").value.trim();
+  if (!q || !map) return;
+
+  const found = allProjects.find(x => (x.name + " " + (x.city||"")).toLowerCase().includes(q.toLowerCase()) && x.latitude != null);
+  if (found) { map.flyTo([found.latitude, found.longitude], 15); return toast("پروژه پیدا شد: " + found.name); }
+
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fa&q=" + encodeURIComponent(q));
+    const d = await r.json();
+    if (!d.length) { toast("مکان پیدا نشد."); return; }
+    map.flyTo([+d[0].lat, +d[0].lon], 14);
+    toast(d[0].display_name);
+  } catch(err){ toast("خطا در جستجو."); }
+}
+
+/* ==================== فایل‌های مهندسی (Supabase Storage) ==================== */
+function fillProjectDropdowns() {
+  const sel = document.getElementById("fileProjSelect");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">انتخاب پروژه مقصد...</option>` + allProjects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+}
+
+async function loadFiles() {
+  const { data, error } = await sb.from("project_files").select("*, projects(name)").order("created_at", { ascending: false });
+  document.getElementById("sFiles").textContent = fmt(data?.length || 0);
+
+  const tbody = document.getElementById("fRows");
+  if (error || !data || !data.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">فایلی آپلود نشده است.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(f => {
+    const sizeKb = Math.ceil(Number(f.file_size||0) / 1024);
+    const sizeStr = sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB";
+    return `<tr>
+      <td>📄 <b>${esc(f.file_name)}</b></td>
+      <td>${esc(f.projects?.name || "—")}</td>
+      <td>${sizeStr}</td>
+      <td>${new Date(f.created_at).toLocaleString("fa-IR")}</td>
+      <td>
+        <button class="btn soft sm" onclick="downloadFile('${esc(f.file_path)}')">⬇ دانلود</button>
+        <button class="btn red sm" onclick="deleteFile('${f.id}','${esc(f.file_path)}')">🗑</button>
+      </td>
+    </tr>`;
   }).join("");
 }
 
-function refresh(){
-  renderDashboard();
-  renderProjects();
-  renderReports();
-  if(map) renderMapProjects();
+async function uploadProjectFiles() {
+  const projId = document.getElementById("fileProjSelect").value;
+  const input  = document.getElementById("fileUploadInput");
+  const files  = Array.from(input.files || []);
+  const out    = document.getElementById("fileUpMsg");
+
+  if (!projId) { toast("ابتدا یک پروژه انتخاب کنید."); return; }
+  if (!files.length) { toast("فایلی انتخاب نشده است."); return; }
+
+  let count = 0;
+  for (const file of files) {
+    out.textContent = "در حال بارگذاری: " + file.name;
+    const ext = file.name.split('.').pop() || "bin";
+    const path = `${projId}/${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
+
+    const { error: upErr } = await sb.storage.from(BUCKET_NAME).upload(path, file, { contentType: file.type || "application/octet-stream" });
+    if (upErr) { toast("خطا در آپلود: " + upErr.message); continue; }
+
+    await sb.from("project_files").insert({
+      project_id: projId,
+      file_name: file.name,
+      file_path: path,
+      file_type: ext,
+      file_size: file.size,
+      uploaded_by: currentUser.id
+    });
+    count++;
+  }
+
+  input.value = "";
+  out.textContent = "";
+  toast(`${fmt(count)} فایل با موفقیت در فضای ابری ذخیره شد ✅`);
+  loadFiles();
 }
 
-function openProject(id){
-  editId = id || null;
-  const p = id ? projects.find(x => x.id === id) : null;
-
-  document.getElementById("modalTitle").innerText = p ? "ویرایش پروژه" : "ثبت پروژه";
-  document.getElementById("pName").value = p?.name || "";
-  document.getElementById("pDesc").value = p?.desc || "";
-  document.getElementById("pCity").value = p?.city || "";
-  document.getElementById("pType").value = p?.type || "نقشه‌برداری";
-  document.getElementById("pStatus").value = p?.status || "active";
-  document.getElementById("pProgress").value = p?.progress ?? 10;
-  document.getElementById("pLat").value = p?.lat || selectedPoint?.lat || "";
-  document.getElementById("pLng").value = p?.lng || selectedPoint?.lng || "";
-
-  selectedGeoJSON = p?.geojson || selectedGeoJSON || null;
-
-  document.getElementById("projectModal").classList.remove("hidden");
+async function downloadFile(path) {
+  const { data, error } = await sb.storage.from(BUCKET_NAME).createSignedUrl(path, 600);
+  if (error) { toast("خطا در دانلود: " + error.message); return; }
+  window.open(data.signedUrl, "_blank");
 }
 
-function closeProject(){
-  document.getElementById("projectModal").classList.add("hidden");
+async function deleteFile(id, path) {
+  if (!confirm("این فایل حذف شود؟")) return;
+  await sb.storage.from(BUCKET_NAME).remove([path]);
+  await sb.from("project_files").delete().eq("id", id);
+  toast("فایل حذف شد.");
+  loadFiles();
 }
 
-function saveProject(e){
-  e.preventDefault();
-
-  const item = {
-    id: editId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
-    name: document.getElementById("pName").value.trim(),
-    desc: document.getElementById("pDesc").value.trim(),
-    city: document.getElementById("pCity").value.trim(),
-    type: document.getElementById("pType").value,
-    status: document.getElementById("pStatus").value,
-    progress: Number(document.getElementById("pProgress").value || 0),
-    lat: document.getElementById("pLat").value,
-    lng: document.getElementById("pLng").value,
-    geojson: selectedGeoJSON,
-    updatedAt: new Date().toISOString()
-  };
-
-  if(editId){
-    projects = projects.map(p => p.id === editId ? item : p);
-    addActivity("ویرایش پروژه: " + item.name);
-  }else{
-    projects.unshift(item);
-    addActivity("ثبت پروژه: " + item.name);
-  }
-
-  saveLocal();
-  closeProject();
-  refresh();
-
-  alert("پروژه ذخیره شد ✅");
-}
-
-function editProject(id){
-  openProject(id);
-}
-
-function deleteProject(id){
-  const p = projects.find(x => x.id === id);
-  if(!p) return;
-  if(!confirm("پروژه «" + p.name + "» حذف شود؟")) return;
-
-  projects = projects.filter(x => x.id !== id);
-  addActivity("حذف پروژه: " + p.name);
-  saveLocal();
-  refresh();
-}
-
-function initMap(){
-  map = L.map("map").setView([25.3,60.65], 13);
-
-  const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
-    maxZoom:19,
-    attribution:"© OpenStreetMap"
-  });
-
-  const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{
-    maxZoom:19,
-    attribution:"Tiles © Esri"
-  }).addTo(map);
-
-  L.control.layers({
-    "ماهواره‌ای":satellite,
-    "خیابانی":street
-  }).addTo(map);
-
-  markersLayer = L.layerGroup().addTo(map);
-  drawnItems = new L.FeatureGroup().addTo(map);
-
-  map.addControl(new L.Control.Draw({
-    position:"topleft",
-    edit:{featureGroup:drawnItems},
-    draw:{
-      polygon:{allowIntersection:false,shapeOptions:{color:"#11c5c6"}},
-      rectangle:{shapeOptions:{color:"#2563eb"}},
-      polyline:{shapeOptions:{color:"#f59e0b",weight:4}},
-      marker:true,
-      circle:false,
-      circlemarker:false
-    }
-  }));
-
-  map.on(L.Draw.Event.CREATED, function(e){
-    drawnItems.addLayer(e.layer);
-    selectedGeoJSON = drawnItems.toGeoJSON();
-
-    let msg = "عارضه ترسیم شد.";
-    if(e.layer instanceof L.Polygon && L.GeometryUtil){
-      const area = L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0]);
-      msg = "محدوده ترسیم شد. مساحت تقریبی: " + Math.round(area).toLocaleString("fa-IR") + " متر مربع";
-    }
-
-    document.getElementById("mapInfo").innerHTML = msg + "<br>اکنون دکمه «پروژه در این موقعیت» را بزنید.";
-  });
-
-  map.on("click", function(e){
-    selectedPoint = {
-      lat:e.latlng.lat.toFixed(6),
-      lng:e.latlng.lng.toFixed(6)
-    };
-
-    document.getElementById("mapInfo").innerHTML =
-      "مختصات انتخابی:<br>Lat: <b>" + selectedPoint.lat + "</b><br>Lng: <b>" + selectedPoint.lng + "</b>";
-  });
-
-  renderMapProjects();
-}
-
-function renderMapProjects(){
-  if(!markersLayer) return;
-
-  markersLayer.clearLayers();
-
-  projects.forEach(p => {
-    if(p.lat && p.lng){
-      L.marker([Number(p.lat), Number(p.lng)])
-        .bindPopup("<b>" + safe(p.name) + "</b><br>" + safe(p.city || "") + "<br>پیشرفت: " + fa(p.progress) + "٪")
-        .addTo(markersLayer);
-    }
-
-    if(p.geojson){
-      try{
-        L.geoJSON(p.geojson,{
-          style:{color:"#11c5c6",weight:3,fillOpacity:.15}
-        }).addTo(markersLayer);
-      }catch(err){}
-    }
-  });
-}
-
-function openProjectFromMap(){
-  if(!selectedPoint && drawnItems && drawnItems.getLayers().length){
-    const center = drawnItems.getBounds().getCenter();
-    selectedPoint = {
-      lat:center.lat.toFixed(6),
-      lng:center.lng.toFixed(6)
-    };
-    selectedGeoJSON = drawnItems.toGeoJSON();
-  }
-
-  if(!selectedPoint){
-    alert("ابتدا روی نقشه کلیک کنید یا محدوده رسم کنید.");
-    return;
-  }
-
-  openProject();
-}
-
-function showOnMap(id){
-  const p = projects.find(x => x.id === id);
-  if(!p || !p.lat || !p.lng) return;
-
-  goPage("mapPage", document.querySelectorAll(".nav")[1]);
-  setTimeout(function(){
-    map.setView([Number(p.lat), Number(p.lng)], 16);
-  },300);
-}
-
-async function searchMap(e){
-  e.preventDefault();
-
-  const q = document.getElementById("mapSearchInput").value.trim();
-  if(!q || !map) return;
-
-  const coords = q.match(/^\s*(-?\d+(\.\d+)?)\s*[, ]\s*(-?\d+(\.\d+)?)\s*$/);
-  if(coords){
-    map.setView([Number(coords[1]), Number(coords[3])], 15);
-    return;
-  }
-
-  const p = projects.find(x => (x.name + " " + x.city).includes(q) && x.lat && x.lng);
-  if(p){
-    map.setView([Number(p.lat), Number(p.lng)], 15);
-    return;
-  }
-
-  try{
-    const res = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fa&q=" + encodeURIComponent(q));
-    const data = await res.json();
-
-    if(data && data[0]){
-      map.setView([Number(data[0].lat), Number(data[0].lon)], 15);
-      selectedPoint = {
-        lat:Number(data[0].lat).toFixed(6),
-        lng:Number(data[0].lon).toFixed(6)
-      };
-      document.getElementById("mapInfo").innerHTML =
-        "مکان پیدا شد:<br>Lat: <b>" + selectedPoint.lat + "</b><br>Lng: <b>" + selectedPoint.lng + "</b>";
-    }else{
-      alert("مکان پیدا نشد.");
-    }
-  }catch(err){
-    alert("خطا در جست‌وجوی مکان.");
-  }
-}
-
-function globalSearch(e){
-  e.preventDefault();
-  const q = document.getElementById("topSearch").value;
-  goPage("projectsPage", document.querySelectorAll(".nav")[2]);
-  document.getElementById("filterText").value = q;
-  renderProjects();
-}
-
-function locateMe(){
-  if(!navigator.geolocation){
-    alert("موقعیت‌یابی در این مرورگر پشتیبانی نمی‌شود.");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(function(pos){
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    selectedPoint = {
-      lat:lat.toFixed(6),
-      lng:lng.toFixed(6)
-    };
-    map.setView([lat,lng],16);
-    document.getElementById("mapInfo").innerHTML =
-      "موقعیت شما:<br>Lat: <b>" + selectedPoint.lat + "</b><br>Lng: <b>" + selectedPoint.lng + "</b>";
-  },function(){
-    alert("اجازه دسترسی به موقعیت داده نشد.");
-  });
-}
-
-refresh();
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<style>
-body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
-#tnxAuthLayer{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#061221,#0b2744);display:grid;place-items:center;padding:18px;color:#17273d}
-.tnx-card{width:min(430px,100%);background:#fff;border-radius:20px;padding:25px;box-shadow:0 20px 70px #0005;direction:rtl}
-.tnx-card h2{margin:8px 0}
-.tnx-card p{font-size:13px;line-height:1.8;color:#65758b}
-.tnx-card label{display:block;font-size:12px;font-weight:bold;margin:12px 0 6px}
-.tnx-card input{width:100%;padding:11px;border:1px solid #dce5ef;border-radius:10px;box-sizing:border-box}
-.tnx-card button{margin-top:12px}
-.tnx-auth-msg{font-size:12px;line-height:1.8;margin-top:10px;color:#c03952}
-#tnxUsersPage{min-height:60vh}
-</style>
-
-<div id="tnxAuthLayer">
-  <div class="tnx-card">
-    <div style="font-size:13px;color:#1688f8;font-weight:bold">⌖ TerraNexa GIS</div>
-    <h2>ورود به سامانه</h2>
-    <p>برای دسترسی به پروژه‌ها وارد شوید یا حساب بسازید. عضویت کاربران جدید پس از تأیید مدیر فعال می‌شود.</p>
-
-    <form id="tnxLoginForm">
-      <label>ایمیل</label>
-      <input id="tnxLoginEmail" type="email" autocomplete="email" required>
-      <label>رمز عبور</label>
-      <input id="tnxLoginPassword" type="password" autocomplete="current-password" required>
-      <button class="btn" style="width:100%">ورود</button>
-    </form>
-
-    <form id="tnxRegisterForm" class="hidden">
-      <label>نام و نام خانوادگی</label>
-      <input id="tnxRegisterName" autocomplete="name" required>
-      <label>ایمیل</label>
-      <input id="tnxRegisterEmail" type="email" autocomplete="email" required>
-      <label>رمز عبور، حداقل ۶ نویسه</label>
-      <input id="tnxRegisterPassword" type="password" minlength="6" autocomplete="new-password" required>
-      <button class="btn" style="width:100%">ثبت‌نام</button>
-    </form>
-
-    <div id="tnxPendingBox" class="hidden">
-      <h2>در انتظار تأیید مدیر</h2>
-      <p>حسابتان ساخته شده است. پس از تأیید مدیر، «بررسی مجدد» را بزنید.</p>
-      <button id="tnxCheckApproval" class="btn">بررسی مجدد</button>
-      <button id="tnxLogoutPending" class="btn soft">خروج</button>
-    </div>
-
-    <button id="tnxSwitchForm" class="btn soft" style="width:100%">ساخت حساب جدید</button>
-    <div id="tnxAuthMessage" class="tnx-auth-msg"></div>
-  </div>
-</div>
-
-<script>
-(function(){
-  "use strict";
-
-  document.body.classList.add("tnx-locked");
-
-  const URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
-  const PUBLISHABLE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
-
-  const authLayer = document.getElementById("tnxAuthLayer");
-  const loginForm = document.getElementById("tnxLoginForm");
-  const registerForm = document.getElementById("tnxRegisterForm");
-  const pendingBox = document.getElementById("tnxPendingBox");
-  const message = document.getElementById("tnxAuthMessage");
-
-  if (!window.supabase || !window.supabase.createClient) {
-    message.textContent = "کتابخانهٔ اتصال بارگذاری نشد. اینترنت را بررسی و صفحه را تازه کنید.";
-    return;
-  }
-
-  const db = window.supabase.createClient(URL, PUBLISHABLE_KEY);
-  let currentUser = null;
-  let currentProfile = null;
-  let pendingCount = -1;
-
-  function say(text, good){
-    message.style.color = good ? "#16865e" : "#c03952";
-    message.textContent = text;
-  }
-
-  function mode(register){
-    loginForm.classList.toggle("hidden", register);
-    registerForm.classList.toggle("hidden", !register);
-    pendingBox.classList.add("hidden");
-    document.getElementById("tnxSwitchForm").textContent =
-      register ? "بازگشت به ورود" : "ساخت حساب جدید";
-    say("", true);
-  }
-
-  document.getElementById("tnxSwitchForm").addEventListener("click", function(){
-    mode(registerForm.classList.contains("hidden"));
-  });
-
-  async function enter(user, logLogin){
-    currentUser = user;
-    say("در حال بررسی حساب...", true);
-
-    if (logLogin) {
-      await db.from("login_events").insert({
-        user_id: user.id,
-        email: user.email,
-        success: true,
-        user_agent: navigator.userAgent
-      });
-    }
-
-    const result = await db.from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (result.error) {
-      say("خطای دریافت حساب: " + result.error.message);
-      return;
-    }
-
-    if (!result.data) {
-      say("پروفایل این حساب در دیتابیس پیدا نشد. مدیر باید تنظیم جدول profiles را بررسی کند.");
-      return;
-    }
-
-    currentProfile = result.data;
-
-    if (!currentProfile.approved) {
-      loginForm.classList.add("hidden");
-      registerForm.classList.add("hidden");
-      pendingBox.classList.remove("hidden");
-      document.getElementById("tnxSwitchForm").classList.add("hidden");
-      say("", true);
-      return;
-    }
-
-    authLayer.classList.add("hidden");
-    document.body.classList.remove("tnx-locked");
-    document.getElementById("tnxSwitchForm").classList.remove("hidden");
-
-    addAccountControls();
-    installCloudFiles();
-    installAdminPage();
-
-    await loadCloudProjects();
-
-    if (currentProfile.role === "admin") {
-      await checkPendingUsers();
-      setInterval(checkPendingUsers, 30000);
-    }
-  }
-
-  loginForm.addEventListener("submit", async function(event){
-    event.preventDefault();
-    say("در حال ورود...", true);
-
-    const result = await db.auth.signInWithPassword({
-      email: document.getElementById("tnxLoginEmail").value.trim(),
-      password: document.getElementById("tnxLoginPassword").value
-    });
-
-    if (result.error) {
-      say("ورود ناموفق: " + result.error.message);
-      return;
-    }
-
-    await enter(result.data.user, true);
-  });
-
-  registerForm.addEventListener("submit", async function(event){
-    event.preventDefault();
-    say("در حال ثبت‌نام...", true);
-
-    const result = await db.auth.signUp({
-      email: document.getElementById("tnxRegisterEmail").value.trim(),
-      password: document.getElementById("tnxRegisterPassword").value,
-      options: {
-        data: {
-          full_name: document.getElementById("tnxRegisterName").value.trim()
-        },
-        emailRedirectTo: location.origin + location.pathname
-      }
-    });
-
-    if (result.error) {
-      say("ثبت‌نام ناموفق: " + result.error.message);
-      return;
-    }
-
-    if (result.data.session) {
-      await enter(result.data.user, true);
-    } else {
-      mode(false);
-      say("ثبت‌نام انجام شد. ایمیل تأیید را باز کنید، سپس از همین صفحه وارد شوید.", true);
-    }
-  });
-
-  document.getElementById("tnxCheckApproval").addEventListener("click", async function(){
-    if (currentUser) await enter(currentUser, false);
-  });
-
-  async function logout(){
-    await db.auth.signOut();
-    location.reload();
-  }
-
-  document.getElementById("tnxLogoutPending").addEventListener("click", logout);
-
-  async function addAccountControls(){
-    const top = document.querySelector(".topbar");
-    if (!top || document.getElementById("tnxLogoutButton")) return;
-
-    const label = document.createElement("span");
-    label.textContent = currentUser.email;
-    label.style.cssText = "font-size:11px;color:var(--muted);max-width:210px;overflow:hidden";
-
-    const button = document.createElement("button");
-    button.id = "tnxLogoutButton";
-    button.className = "btn soft small";
-    button.textContent = "خروج";
-    button.addEventListener("click", logout);
-
-    top.append(label, button);
-  }
-
-  function fromRow(row){
-    return {
-      id: row.id,
-      name: row.name,
-      description: row.description || "",
-      type: row.project_type || "نقشه‌برداری",
-      city: row.city || "",
-      status: row.status || "active",
-      progress: Number(row.progress || 0),
-      latitude: row.latitude,
-      longitude: row.longitude,
-      geojson: row.geojson || null,
-      owner_id: row.owner_id
-    };
-  }
-
-  async function loadCloudProjects(){
-    let result = await db.from("projects")
-      .select("*")
-      .order("created_at", {ascending:false});
-
-    if (result.error) {
-      toast("دریافت پروژه‌ها ناموفق بود: " + result.error.message);
-      return;
-    }
-
-    let rows = result.data || [];
-    const localRows = readJSON(STORAGE_KEY, []);
-
-    if (!rows.length && localRows.length &&
-        confirm("پروژه‌های ذخیره‌شده در این مرورگر را به دیتابیس آنلاین منتقل کنیم؟")) {
-      const importRows = localRows.map(p => ({
-        name: p.name,
-        description: p.description || "",
-        city: p.city || "",
-        project_type: p.type || "نقشه‌برداری",
-        status: p.status || "active",
-        progress: Number(p.progress || 0),
-        latitude: p.latitude ?? null,
-        longitude: p.longitude ?? null,
-        geojson: p.geojson || null,
-        owner_id: currentUser.id
-      }));
-
-      const imported = await db.from("projects").insert(importRows);
-      if (imported.error) toast("انتقال پروژه‌های قبلی انجام نشد: " + imported.error.message);
-
-      result = await db.from("projects").select("*").order("created_at", {ascending:false});
-      rows = result.data || [];
-    }
-
-    projects = rows.map(fromRow);
-    refresh();
-    fillFileProjects();
-  }
-
-  function logCloud(action, type, id){
-    db.from("activity_logs").insert({
-      actor_id: currentUser.id,
-      action: action,
-      entity_type: type,
-      entity_id: id || null
-    });
-  }
-
-  const projectForm = document.getElementById("projectForm");
-
-  projectForm.addEventListener("submit", async function(event){
-    event.preventDefault();
-    event.stopImmediatePropagation();
-
-    const latText = document.getElementById("latitude").value.trim();
-    const lngText = document.getElementById("longitude").value.trim();
-    let geometry = draftGeoJSON;
-
-    if (!geometry && drawings && drawings.getLayers().length) {
-      geometry = drawings.toGeoJSON();
-    }
-
-    let lat = latText === "" ? null : Number(latText);
-    let lng = lngText === "" ? null : Number(lngText);
-
-    if ((lat === null || lng === null) && geometry && geometry.features &&
-        geometry.features.length && window.L) {
-      try {
-        const bounds = L.geoJSON(geometry).getBounds();
-        if (bounds.isValid()) {
-          const center = bounds.getCenter();
-          lat = center.lat;
-          lng = center.lng;
-        }
-      } catch {}
-    }
-
-    const row = {
-      name: document.getElementById("projectName").value.trim(),
-      description: document.getElementById("projectDescription").value.trim(),
-      project_type: document.getElementById("projectType").value,
-      city: document.getElementById("projectCity").value.trim(),
-      status: document.getElementById("projectStatus").value,
-      progress: Number(document.getElementById("projectProgress").value),
-      latitude: lat,
-      longitude: lng,
-      geojson: geometry || null,
-      updated_at: new Date().toISOString()
-    };
-
-    let result;
-    if (editingId) {
-      result = await db.from("projects").update(row)
-        .eq("id", editingId).select("*").single();
-    } else {
-      result = await db.from("projects")
-        .insert({...row, owner_id:currentUser.id})
-        .select("*").single();
-    }
-
-    if (result.error) {
-      toast("ذخیره آنلاین انجام نشد: " + result.error.message);
-      return;
-    }
-
-    const action = editingId ? "ویرایش پروژه: " : "ثبت پروژه: ";
-    logCloud(action + row.name, "project", result.data.id);
-    closeProject();
-    if (drawings) drawings.clearLayers();
-    pickedPoint = null;
-    draftGeoJSON = null;
-    await loadCloudProjects();
-    toast("پروژه در دیتابیس آنلاین ذخیره شد.");
-  }, true);
-
-  window.deleteProject = async function(id){
-    const project = projects.find(p => p.id === id);
-    if (!project || !confirm("پروژه «" + project.name + "» حذف شود؟")) return;
-
-    const result = await db.from("projects").delete().eq("id", id);
-    if (result.error) {
-      toast("حذف انجام نشد: " + result.error.message);
-      return;
-    }
-
-    logCloud("حذف پروژه: " + project.name, "project", id);
-    await loadCloudProjects();
-    toast("پروژه از دیتابیس حذف شد.");
-  };
-
-  const originalRenderProjects = renderProjects;
-  renderProjects = function(){
-    originalRenderProjects();
-
-    document.querySelectorAll("#projectRows tr").forEach(function(tr){
-      const button = tr.querySelector("button[onclick*='editProject']");
-      if (!button) return;
-
-      const match = button.getAttribute("onclick").match(/editProject\('([^']+)'\)/);
-      const project = match && projects.find(p => p.id === match[1]);
-
-      if (project && project.owner_id !== currentUser?.id &&
-          currentProfile?.role !== "admin") {
-        tr.querySelectorAll("button").forEach(b => b.classList.add("hidden"));
-      }
-    });
-  };
-
-  function installCloudFiles(){
-    const section = document.getElementById("filesPage");
-    section.innerHTML = `
-      <div class="page-head">
-        <div><h1>فایل‌های مهندسی</h1><p>ذخیره در فضای ابری پروژه</p></div>
-      </div>
-      <div class="card" style="padding:15px;margin-bottom:14px">
-        <div class="row">
-          <div><label>پروژه</label><select id="tnxFileProject"></select></div>
-          <div><label>فایل‌ها (حداکثر ۵۰ مگابایت برای هر فایل)</label>
-            <input id="tnxFileInput" type="file" multiple accept=".pdf,.dwg,.dxf,.kml,.kmz,.shp,.zip,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.tif,.tiff">
-          </div>
-        </div>
-        <button class="btn" id="tnxUploadButton" style="margin-top:12px">⬆ بارگذاری فایل</button>
-        <span id="tnxFileMessage" style="font-size:12px"></span>
-      </div>
-      <div class="card"><div class="table-wrap">
-        <table><thead><tr><th>نام فایل</th><th>پروژه</th><th>حجم</th><th>عملیات</th></tr></thead>
-        <tbody id="tnxFileRows"></tbody></table>
-      </div></div>`;
-
-    document.getElementById("tnxUploadButton").addEventListener("click", uploadFiles);
-    document.getElementById("tnxFileProject").addEventListener("change", loadFiles);
-    const fileNav = document.querySelector('[data-page="filesPage"]');
-    if (fileNav) fileNav.addEventListener("click", function(){setTimeout(loadFiles,100)});
-  }
-
-  function fillFileProjects(){
-    const select = document.getElementById("tnxFileProject");
-    if (!select) return;
-
-    const oldValue = select.value;
-    select.innerHTML = `<option value="">همه پروژه‌ها</option>` +
-      projects.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
-
-    if (oldValue) select.value = oldValue;
-    loadFiles();
-  }
-
-  async function loadFiles(){
-    const body = document.getElementById("tnxFileRows");
-    if (!body) return;
-
-    const result = await db.from("project_files")
-      .select("*")
-      .order("created_at", {ascending:false});
-
-    if (result.error) {
-      body.innerHTML = `<tr><td colspan="4" class="empty">${esc(result.error.message)}</td></tr>`;
-      return;
-    }
-
-    const selected = document.getElementById("tnxFileProject").value;
-    const files = (result.data || []).filter(f => !selected || f.project_id === selected);
-
-    body.innerHTML = files.map(f => {
-      const project = projects.find(p => p.id === f.project_id);
-      const path = String(f.file_path || "");
-      const safePath = path.replace(/\\/g,"").replace(/'/g,"");
-      const canDelete = currentProfile.role === "admin" || f.uploaded_by === currentUser.id;
-
-      return `<tr>
-        <td>${esc(f.file_name)}</td>
-        <td>${esc(project?.name || "—")}</td>
-        <td>${Math.max(1,Math.ceil(Number(f.file_size || 0)/1024)).toLocaleString("fa-IR")} KB</td>
-        <td>
-          <button class="btn soft small" onclick="window.tnxDownloadFile('${safePath}')">دانلود</button>
-          ${canDelete ? `<button class="btn red small" onclick="window.tnxDeleteFile('${esc(f.id)}','${safePath}')">حذف</button>` : ""}
-        </td>
-      </tr>`;
-    }).join("") || `<tr><td colspan="4" class="empty">فایلی ثبت نشده است.</td></tr>`;
-  }
-
-  async function uploadFiles(){
-    const projectId = document.getElementById("tnxFileProject").value;
-    const input = document.getElementById("tnxFileInput");
-    const files = Array.from(input.files || []);
-    const out = document.getElementById("tnxFileMessage");
-
-    if (!projectId) { toast("ابتدا یک پروژه را انتخاب کنید."); return; }
-    if (!files.length) { toast("ابتدا فایل را انتخاب کنید."); return; }
-
-    let uploaded = 0;
-
-    for (const file of files) {
-      if (file.size > 50 * 1024 * 1024) {
-        toast("فایل «" + file.name + "» از حد ۵۰ مگابایت بزرگ‌تر است.");
-        continue;
-      }
-
-      out.textContent = "در حال بارگذاری: " + file.name;
-
-      const extension = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g,"");
-      const random = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
-      const path = projectId + "/" + currentUser.id + "/" + random + "." + extension;
-
-      const stored = await db.storage.from("project-files").upload(path, file, {
-        upsert: false,
-        contentType: file.type || "application/octet-stream"
-      });
-
-      if (stored.error) {
-        toast("بارگذاری ناموفق: " + stored.error.message);
-        continue;
-      }
-
-      const saved = await db.from("project_files").insert({
-        project_id: projectId,
-        file_name: file.name,
-        file_path: path,
-        file_type: extension,
-        file_size: file.size,
-        uploaded_by: currentUser.id
-      });
-
-      if (saved.error) {
-        await db.storage.from("project-files").remove([path]);
-        toast("ثبت اطلاعات فایل ناموفق بود: " + saved.error.message);
-        continue;
-      }
-
-      uploaded++;
-    }
-
-    input.value = "";
-    out.textContent = "";
-    await loadFiles();
-    toast(uploaded + " فایل در فضای ابری ذخیره شد.");
-  }
-
-  window.tnxDownloadFile = async function(path){
-    const result = await db.storage.from("project-files").createSignedUrl(path, 600);
-    if (result.error) { toast("دانلود ناموفق: " + result.error.message); return; }
-    window.open(result.data.signedUrl, "_blank", "noopener");
-  };
-
-  window.tnxDeleteFile = async function(id, path){
-    if (!confirm("این فایل حذف شود؟")) return;
-
-    const removed = await db.storage.from("project-files").remove([path]);
-    if (removed.error) { toast(removed.error.message); return; }
-
-    const result = await db.from("project_files").delete().eq("id", id);
-    if (result.error) { toast(result.error.message); return; }
-
-    await loadFiles();
-    toast("فایل حذف شد.");
-  };
-
-  function installAdminPage(){
-    if (currentProfile.role !== "admin") return;
-
-    const sidebar = document.getElementById("sidebar");
-    if (!document.getElementById("tnxUsersNav")) {
-      sidebar.insertAdjacentHTML("beforeend",
-        `<div class="nav-title">مدیریت</div>
-         <button class="nav" id="tnxUsersNav">👥 کاربران و ورودها <span id="tnxPendingBadge"></span></button>`);
-
-      document.getElementById("tnxUsersNav").addEventListener("click", showUsersPage);
-    }
-
-    if (!document.getElementById("tnxUsersPage")) {
-      const page = document.createElement("section");
-      page.id = "tnxUsersPage";
-      page.className = "page";
-      page.innerHTML = `
-        <div class="page-head"><div><h1>کاربران و ورودها</h1><p>تأیید عضویت و بررسی ورودهای ثبت‌شده</p></div>
-        <button class="btn soft" id="tnxReloadUsers">بروزرسانی</button></div>
-        <div class="card" style="margin-bottom:15px">
-          <div class="card-title">کاربران</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>نام</th><th>ایمیل</th><th>نقش</th><th>دسترسی</th><th>عملیات</th></tr></thead>
-            <tbody id="tnxUserRows"></tbody>
-          </table></div>
-        </div>
-        <div class="card"><div class="card-title">آخرین ورودها</div>
-          <div class="table-wrap"><table>
-            <thead><tr><th>ایمیل</th><th>زمان</th><th>دستگاه/مرورگر</th></tr></thead>
-            <tbody id="tnxLoginRows"></tbody>
-          </table></div>
-        </div>`;
-
-      document.querySelector(".main main").appendChild(page);
-      document.getElementById("tnxReloadUsers").addEventListener("click", loadAdminData);
-    }
-  }
-
-  function showUsersPage(){
-    if (currentProfile?.role !== "admin") return;
-
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    document.getElementById("tnxUsersPage").classList.add("active");
-    document.querySelectorAll(".nav").forEach(n => n.classList.remove("active"));
-    document.getElementById("tnxUsersNav").classList.add("active");
-    document.getElementById("pageTitle").textContent = "کاربران و ورودها";
-    document.getElementById("sidebar").classList.remove("open");
-    loadAdminData();
-  }
-
-  async function loadAdminData(){
-    const result = await db.from("profiles")
-      .select("id,full_name,email,role,approved,created_at")
-      .order("created_at", {ascending:false});
-
-    const rows = document.getElementById("tnxUserRows");
-    if (result.error) {
-      rows.innerHTML = `<tr><td colspan="5" class="empty">${esc(result.error.message)}</td></tr>`;
-      return;
-    }
-
-    const roles = {
-      admin:"مدیر کل",
-      project_manager:"مدیر پروژه",
-      surveyor:"نقشه‌بردار",
-      supervisor:"ناظر",
-      client:"کارفرما"
-    };
-
-    rows.innerHTML = (result.data || []).map(u => {
-      const self = u.id === currentUser.id;
-      const roleOptions = Object.entries(roles).map(([key,label]) =>
-        `<option value="${key}" ${u.role===key?"selected":""}>${label}</option>`
-      ).join("");
-
-      return `<tr>
-        <td>${esc(u.full_name || "—")}</td>
-        <td>${esc(u.email || "—")}</td>
-        <td><select ${self?"disabled":""} onchange="window.tnxSetRole('${esc(u.id)}',this.value)">${roleOptions}</select></td>
-        <td>${u.approved ? "تأییدشده" : "در انتظار"}</td>
-        <td>${self ? "حساب مدیر" : u.approved
-          ? `<button class="btn red small" onclick="window.tnxSetApproval('${esc(u.id)}',false)">لغو دسترسی</button>`
-          : `<button class="btn small" onclick="window.tnxSetApproval('${esc(u.id)}',true)">تأیید کاربر</button>`}
-        </td>
-      </tr>`;
-    }).join("") || `<tr><td colspan="5" class="empty">کاربری پیدا نشد.</td></tr>`;
-
-    const logins = await db.from("login_events")
-      .select("email,created_at,user_agent")
-      .order("created_at", {ascending:false})
-      .limit(30);
-
-    const loginRows = document.getElementById("tnxLoginRows");
-    if (logins.error) {
-      loginRows.innerHTML = `<tr><td colspan="3" class="empty">${esc(logins.error.message)}</td></tr>`;
-    } else {
-      loginRows.innerHTML = (logins.data || []).map(item => `
-        <tr><td>${esc(item.email || "—")}</td>
-        <td>${new Date(item.created_at).toLocaleString("fa-IR")}</td>
-        <td>${esc((item.user_agent || "—").slice(0,75))}</td></tr>
-      `).join("") || `<tr><td colspan="3" class="empty">ورودی ثبت نشده است.</td></tr>`;
-    }
-
-    await checkPendingUsers();
-  }
-
-  window.tnxSetApproval = async function(id, approved){
-    const result = await db.from("profiles").update({approved}).eq("id", id);
-    if (result.error) { toast("تغییر دسترسی ناموفق بود: " + result.error.message); return; }
-    toast(approved ? "کاربر تأیید شد." : "دسترسی کاربر لغو شد.");
-    await loadAdminData();
-  };
-
-  window.tnxSetRole = async function(id, role){
-    const result = await db.from("profiles").update({role}).eq("id", id);
-    if (result.error) { toast("تغییر نقش ناموفق بود: " + result.error.message); return; }
-    toast("نقش کاربر تغییر کرد.");
-  };
-
-  async function checkPendingUsers(){
-    if (currentProfile?.role !== "admin") return;
-
-    const result = await db.from("profiles")
-      .select("id", {count:"exact",head:true})
-      .eq("approved", false);
-
-    if (result.error) return;
-
-    const count = result.count || 0;
-    const badge = document.getElementById("tnxPendingBadge");
-
-    if (badge) badge.textContent = count ? " (" + count.toLocaleString("fa-IR") + " درخواست)" : "";
-
-    if (count > pendingCount && pendingCount >= 0) {
-      toast("درخواست عضویت جدید برای بررسی دارید.");
-    }
-    pendingCount = count;
-  }
-
-  async function init(){
-    const result = await db.auth.getSession();
-
-    if (result.error) {
-      say("بررسی ورود ناموفق بود: " + result.error.message);
-      return;
-    }
-
-    if (result.data.session) {
-      await enter(result.data.session.user, false);
-    }
-  }
-
-  init();
-})();
-</script>
-  <script>
-(function(){
-  const DB_NAME = "terranexa_files_db_v1";
-  const STORE = "files";
-
-  function openFilesDB(){
-    return new Promise((resolve, reject)=>{
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = function(){
-        const db = req.result;
-        if(!db.objectStoreNames.contains(STORE)){
-          const store = db.createObjectStore(STORE, { keyPath: "id" });
-          store.createIndex("projectId", "projectId");
-        }
-      };
-      req.onsuccess = ()=>resolve(req.result);
-      req.onerror = ()=>reject(req.error);
-    });
-  }
-
-  async function getAllFiles(){
-    const db = await openFilesDB();
-    return new Promise((resolve, reject)=>{
-      const tx = db.transaction(STORE, "readonly");
-      const store = tx.objectStore(STORE);
-      const req = store.getAll();
-      req.onsuccess = ()=>resolve(req.result || []);
-      req.onerror = ()=>reject(req.error);
-    });
-  }
-
-  async function getFile(id){
-    const db = await openFilesDB();
-    return new Promise((resolve, reject)=>{
-      const tx = db.transaction(STORE, "readonly");
-      const store = tx.objectStore(STORE);
-      const req = store.get(id);
-      req.onsuccess = ()=>resolve(req.result);
-      req.onerror = ()=>reject(req.error);
-    });
-  }
-
-  async function putFile(fileRecord){
-    const db = await openFilesDB();
-    return new Promise((resolve, reject)=>{
-      const tx = db.transaction(STORE, "readwrite");
-      const store = tx.objectStore(STORE);
-      const req = store.put(fileRecord);
-      req.onsuccess = ()=>resolve();
-      req.onerror = ()=>reject(req.error);
-    });
-  }
-
-  async function removeFile(id){
-    const db = await openFilesDB();
-    return new Promise((resolve, reject)=>{
-      const tx = db.transaction(STORE, "readwrite");
-      const store = tx.objectStore(STORE);
-      const req = store.delete(id);
-      req.onsuccess = ()=>resolve();
-      req.onerror = ()=>reject(req.error);
-    });
-  }
-
-  function safeText(v){
-    return String(v || "").replace(/[&<>"']/g, function(c){
-      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
-    });
-  }
-
-  function getProjectsForFiles(){
-    try{
-      return JSON.parse(localStorage.getItem("terranexa_projects_clean_v1") || "[]");
-    }catch(e){
-      return [];
-    }
-  }
-
-  function fileSize(bytes){
-    bytes = Number(bytes || 0);
-    if(bytes > 1024 * 1024){
-      return (bytes / 1024 / 1024).toFixed(2) + " MB";
-    }
-    return Math.ceil(bytes / 1024) + " KB";
-  }
-
-  window.TNA_renderFiles = async function(){
-    const section = document.getElementById("filesPage");
-    if(!section) return;
-
-    const projects = getProjectsForFiles();
-
-    section.innerHTML = `
-      <div class="head">
-        <div>
-          <h1>فایل‌ها</h1>
-          <p>آپلود، مشاهده، دانلود و حذف فایل‌های مهندسی پروژه‌ها</p>
-        </div>
-      </div>
-
-      <div class="card" style="padding:18px;margin-bottom:18px;">
-        <div class="row">
-          <div class="field">
-            <label>انتخاب پروژه</label>
-            <select id="tnaFileProject">
-              ${
-                projects.length
-                ? projects.map(p => `<option value="${safeText(p.id)}">${safeText(p.name)}</option>`).join("")
-                : `<option value="">ابتدا یک پروژه ثبت کنید</option>`
-              }
-            </select>
-          </div>
-
-          <div class="field">
-            <label>انتخاب فایل</label>
-            <input id="tnaFileInput" type="file" multiple accept=".pdf,.dwg,.dxf,.kml,.kmz,.zip,.rar,.jpg,.jpeg,.png,.xlsx,.xls,.csv,.txt">
-          </div>
-        </div>
-
-        <button class="btn" onclick="TNA_uploadFiles()">آپلود فایل</button>
-
-        <p style="font-size:12px;color:#6b7c93;line-height:1.8;margin-top:12px;">
-          فایل‌ها فعلاً داخل مرورگر همین دستگاه ذخیره می‌شوند و قابل دانلود هستند.
-          برای آپلود واقعی چندکاربره، مرحله بعد Supabase Storage را وصل می‌کنیم.
-        </p>
-      </div>
-
-      <div class="card">
-        <div class="card-title">لیست فایل‌های ثبت‌شده</div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>نام فایل</th>
-                <th>پروژه</th>
-                <th>نوع</th>
-                <th>حجم</th>
-                <th>تاریخ</th>
-                <th>عملیات</th>
-              </tr>
-            </thead>
-            <tbody id="tnaFilesRows">
-              <tr><td colspan="6" class="empty">در حال بارگذاری...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-
-    const files = await getAllFiles();
-    const rows = document.getElementById("tnaFilesRows");
-
-    rows.innerHTML = files.length ? files.map(f => `
-      <tr>
-        <td>${safeText(f.name)}</td>
-        <td>${safeText(f.projectName || "—")}</td>
-        <td>${safeText(f.ext || "FILE")}</td>
-        <td>${fileSize(f.size)}</td>
-        <td>${safeText(f.createdAt)}</td>
-        <td>
-          <button class="btn soft small" onclick="TNA_downloadFile('${safeText(f.id)}')">دانلود</button>
-          <button class="btn red small" onclick="TNA_deleteFile('${safeText(f.id)}')">حذف</button>
-        </td>
-      </tr>
-    `).join("") : `<tr><td colspan="6" class="empty">هنوز فایلی ثبت نشده است.</td></tr>`;
-  };
-
-  window.TNA_uploadFiles = async function(){
-    const projectId = document.getElementById("tnaFileProject")?.value;
-    const input = document.getElementById("tnaFileInput");
-
-    if(!projectId){
-      alert("اول یک پروژه ثبت و انتخاب کنید.");
-      return;
-    }
-
-    if(!input || !input.files || !input.files.length){
-      alert("فایلی انتخاب نشده است.");
-      return;
-    }
-
-    const projects = getProjectsForFiles();
-    const project = projects.find(p => p.id === projectId);
-
-    for(const file of Array.from(input.files)){
-      const ext = (file.name.split(".").pop() || "FILE").toUpperCase();
-
-      await putFile({
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        projectId: projectId,
-        projectName: project ? project.name : "",
-        name: file.name,
-        ext: ext,
-        size: file.size,
-        blob: file,
-        createdAt: new Date().toLocaleString("fa-IR")
-      });
-    }
-
-    input.value = "";
-    alert("فایل‌ها با موفقیت ذخیره شدند ✅");
-    TNA_renderFiles();
-  };
-
-  window.TNA_downloadFile = async function(id){
-    const f = await getFile(id);
-    if(!f){
-      alert("فایل پیدا نشد.");
-      return;
-    }
-
-    const url = URL.createObjectURL(f.blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = f.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  };
-
-  window.TNA_deleteFile = async function(id){
-    if(!confirm("این فایل حذف شود؟")) return;
-    await removeFile(id);
-    alert("فایل حذف شد.");
-    TNA_renderFiles();
-  };
-
-  const oldGoPage = window.goPage;
-  window.goPage = function(id, btn){
-    if(typeof oldGoPage === "function"){
-      oldGoPage(id, btn);
-    }
-
-    if(id === "filesPage"){
-      setTimeout(()=>TNA_renderFiles(), 100);
-    }
-  };
-
-  document.addEventListener("click", function(e){
-    const text = e.target && e.target.innerText ? e.target.innerText : "";
-    if(text.includes("فایل")){
-      setTimeout(()=>TNA_renderFiles(), 200);
-    }
-  });
-
-})();
-</script>
-  <script>
-(function () {
-  const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
-
-  let db = null;
-  let projectsCache = [];
-
-  function notify(text) {
-    if (typeof window.toast === "function") window.toast(text);
-    else alert(text);
-  }
-
-  function loadSupabase() {
-    if (window.supabase?.createClient) return Promise.resolve();
-
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-      script.onload = resolve;
-      script.onerror = () => reject(new Error("کتابخانه Supabase بارگذاری نشد."));
-      document.head.appendChild(script);
-    });
-  }
-
-  async function getClient() {
-    if (db) return db;
-    await loadSupabase();
-
-    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storageKey: "sb-ypeukrgjhvfgndmqmnnd-auth-token"
-      }
-    });
-
-    return db;
-  }
-
-  function projectSelector() {
-    let select = document.getElementById("tnxOnlineProject");
-    if (select) return select;
-
-    const input = document.getElementById("tnaFileInput");
-    if (!input) return null;
-
-    const field = input.closest(".field") || input.parentElement;
-    const wrapper = document.createElement("div");
-    wrapper.className = "field";
-
-    const label = document.createElement("label");
-    label.textContent = "پروژهٔ آنلاین مقصد";
-    label.htmlFor = "tnxOnlineProject";
-
-    select = document.createElement("select");
-    select.id = "tnxOnlineProject";
-    select.innerHTML = '<option value="">در حال دریافت پروژه‌ها…</option>';
-
-    wrapper.append(label, select);
-    field.parentNode.insertBefore(wrapper, field);
-
-    select.addEventListener("change", loadCloudFiles);
-    return select;
-  }
-
-  async function loadOnlineProjects() {
-    const select = projectSelector();
-    if (!select) return;
-
-    const client = await getClient();
-    const session = await client.auth.getSession();
-
-    if (!session.data.session) {
-      select.innerHTML = '<option value="">ابتدا وارد سایت شوید</option>';
-      return;
-    }
-
-    const result = await client
-      .from("projects")
-      .select("id,name")
-      .order("created_at", { ascending: false });
-
-    if (result.error) {
-      select.innerHTML = '<option value="">خطا در دریافت پروژه‌ها</option>';
-      notify("دریافت پروژه‌ها ناموفق بود: " + result.error.message);
-      return;
-    }
-
-    projectsCache = result.data || [];
-    const previous = select.value;
-
-    select.innerHTML = "";
-    const first = document.createElement("option");
-    first.value = "";
-    first.textContent = projectsCache.length
-      ? "یک پروژه انتخاب کنید…"
-      : "پروژهٔ آنلاین پیدا نشد";
-    select.appendChild(first);
-
-    projectsCache.forEach(project => {
-      const option = document.createElement("option");
-      option.value = project.id;
-      option.textContent = project.name;
-      select.appendChild(option);
-    });
-
-    if (projectsCache.some(project => project.id === previous)) {
-      select.value = previous;
-    } else if (projectsCache.length === 1) {
-      select.value = projectsCache[0].id;
-    }
-  }
-
-  async function loadCloudFiles() {
-    const body = document.getElementById("tnaFilesRows");
-    if (!body) return;
-
-    const client = await getClient();
-    const session = await client.auth.getSession();
-
-    if (!session.data.session) {
-      body.innerHTML = '<tr><td colspan="6">برای دیدن فایل‌ها وارد شوید.</td></tr>';
-      return;
-    }
-
-    const result = await client
-      .from("project_files")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (result.error) {
-      body.innerHTML = "";
-      const row = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 6;
-      cell.textContent = "خطا در دریافت فایل‌ها: " + result.error.message;
-      row.appendChild(cell);
-      body.appendChild(row);
-      return;
-    }
-
-    const selectedProject = projectSelector()?.value || "";
-    const files = (result.data || []).filter(file =>
-      !selectedProject || file.project_id === selectedProject
-    );
-
-    body.innerHTML = "";
-
-    if (!files.length) {
-      const row = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 6;
-      cell.textContent = "هنوز فایلی در فضای آنلاین ثبت نشده است.";
-      row.appendChild(cell);
-      body.appendChild(row);
-      return;
-    }
-
-    files.forEach(file => {
-      const row = document.createElement("tr");
-      const project = projectsCache.find(item => item.id === file.project_id);
-
-      [
-        file.file_name || "—",
-        project?.name || "—",
-        file.file_type || "—",
-        Math.max(1, Math.ceil(Number(file.file_size || 0) / 1024)) + " KB",
-        file.created_at ? new Date(file.created_at).toLocaleString("fa-IR") : "—"
-      ].forEach(value => {
-        const cell = document.createElement("td");
-        cell.textContent = value;
-        row.appendChild(cell);
-      });
-
-      const actionCell = document.createElement("td");
-      const downloadButton = document.createElement("button");
-      downloadButton.className = "btn soft small";
-      downloadButton.textContent = "دانلود";
-
-      downloadButton.onclick = async () => {
-        const popup = window.open("about:blank", "_blank");
-        const signed = await client.storage
-          .from("project-files")
-          .createSignedUrl(file.file_path, 600);
-
-        if (signed.error) {
-          popup?.close();
-          notify("دانلود ناموفق بود: " + signed.error.message);
-          return;
-        }
-
-        if (popup) popup.location.href = signed.data.signedUrl;
-        else location.href = signed.data.signedUrl;
-      };
-
-      actionCell.appendChild(downloadButton);
-      row.appendChild(actionCell);
-      body.appendChild(row);
-    });
-  }
-
-  window.TNA_loadCloudFiles = loadCloudFiles;
-
-  window.TNA_uploadFiles = async function () {
-    try {
-      const client = await getClient();
-      const input = document.getElementById("tnaFileInput");
-      const select = projectSelector();
-      const files = Array.from(input?.files || []);
-
-      if (!input) return notify("فیلد انتخاب فایل پیدا نشد.");
-      if (!files.length) return notify("ابتدا یک فایل انتخاب کنید.");
-
-      const sessionResult = await client.auth.getSession();
-      const user = sessionResult.data.session?.user;
-
-      if (!user) return notify("ابتدا از حساب خود وارد سایت شوید.");
-      if (!select?.value) return notify("ابتدا یک پروژهٔ آنلاین انتخاب کنید.");
-
-      const projectId = select.value;
-      let uploaded = 0;
-
-      for (const file of files) {
-        if (file.size > 50 * 1024 * 1024) {
-          notify("فایل «" + file.name + "» بزرگ‌تر از ۵۰ مگابایت است.");
-          continue;
-        }
-
-        const safeName = file.name.replace(/[\\/]/g, "_")
-          .replace(/[^A-Za-z0-9._-]/g, "_");
-        const randomId = crypto.randomUUID
-          ? crypto.randomUUID()
-          : String(Date.now());
-
-        const path = projectId + "/" + user.id + "/" + randomId + "-" + safeName;
-
-        const upload = await client.storage
-          .from("project-files")
-          .upload(path, file, {
-            upsert: false,
-            contentType: file.type || "application/octet-stream"
-          });
-
-        if (upload.error) {
-          notify("آپلود ناموفق بود: " + upload.error.message);
-          continue;
-        }
-
-        const saved = await client.from("project_files").insert({
-          project_id: projectId,
-          file_name: file.name,
-          file_path: path,
-          file_type: file.name.split(".").pop() || "",
-          file_size: file.size,
-          uploaded_by: user.id
-        });
-
-        if (saved.error) {
-          await client.storage.from("project-files").remove([path]);
-          notify("ثبت مشخصات فایل ناموفق بود: " + saved.error.message);
-          continue;
-        }
-
-        uploaded++;
-      }
-
-      input.value = "";
-      await loadCloudFiles();
-      notify(uploaded + " فایل در فضای آنلاین ذخیره شد.");
-    } catch (error) {
-      notify("اتصال یا آپلود ناموفق بود: " + (error.message || error));
-    }
-  };
-
-  document.addEventListener("click", event => {
-    const button = event.target.closest("button,a");
-    if (button && /فایل/.test(button.textContent || "")) {
-      setTimeout(async () => {
-        try {
-          await loadOnlineProjects();
-          await loadCloudFiles();
-        } catch (error) {
-          console.error(error);
-        }
-      }, 400);
-    }
-  });
-})();
-</script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function(){
-  const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
-  const BUCKET = "project-files";
-
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  let currentUser = null;
-
-  function safe(v){
-    return String(v || "").replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-  }
-
-  function sizeText(b){
-    b = Number(b || 0);
-    if(b > 1024*1024) return (b/1024/1024).toFixed(2) + " MB";
-    return Math.ceil(b/1024) + " KB";
-  }
-
-  function openAuthModal(){
-    if(document.getElementById("tnxAuth")) return;
-
-    const box = document.createElement("div");
-    box.id = "tnxAuth";
-    box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:15px;direction:rtl;font-family:Tahoma,Arial;";
-
-    box.innerHTML = `
-      <div style="background:#fff;color:#111;width:min(400px,100%);border-radius:16px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h3 style="margin:0;">ورود / ثبت‌نام جهانی</h3>
-          <button onclick="document.getElementById('tnxAuth').remove()" style="border:0;background:#eef2f7;border-radius:10px;padding:7px 11px;cursor:pointer;">بستن</button>
-        </div>
-
-        <label style="font-size:13px;font-weight:bold;">ایمیل</label>
-        <input id="tnxEmail" type="email" style="width:100%;padding:11px;margin:6px 0 10px;border:1px solid #cbd5e1;border-radius:10px;">
-
-        <label style="font-size:13px;font-weight:bold;">رمز عبور</label>
-        <input id="tnxPass" type="password" style="width:100%;padding:11px;margin:6px 0 14px;border:1px solid #cbd5e1;border-radius:10px;">
-
-        <div style="display:flex;gap:8px;">
-          <button onclick="tnxLogin()" style="flex:1;border:0;border-radius:11px;padding:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;">ورود</button>
-          <button onclick="tnxSignup()" style="flex:1;border:0;border-radius:11px;padding:11px;background:#111827;color:#fff;font-weight:bold;cursor:pointer;">ثبت‌نام</button>
-        </div>
-
-        <p id="tnxMsg" style="margin-top:12px;font-size:12px;color:#b91c1c;"></p>
-      </div>
-    `;
-
-    document.body.appendChild(box);
-  }
-
-  window.tnxLogin = async function(){
-    const email = document.getElementById("tnxEmail").value.trim();
-    const pass = document.getElementById("tnxPass").value;
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if(error){ document.getElementById("tnxMsg").innerText = "خطا: " + error.message; return; }
-    currentUser = data.user;
-    document.getElementById("tnxAuth").remove();
-    alert("ورود موفق ✅");
-    updateAuthButton();
-    renderCloudProjects();
-    renderCloudFiles();
-  };
-
-  window.tnxSignup = async function(){
-    const email = document.getElementById("tnxEmail").value.trim();
-    const pass = document.getElementById("tnxPass").value;
-    const { error } = await sb.auth.signUp({ email, password: pass });
-    if(error){ document.getElementById("tnxMsg").innerText = "خطا: " + error.message; return; }
-    alert("ثبت‌نام انجام شد. حالا دکمه ورود را بزنید.");
-  };
-
-  window.tnxLogout = async function(){
-    await sb.auth.signOut();
-    currentUser = null;
-    updateAuthButton();
-    alert("خروج انجام شد.");
-    renderCloudProjects();
-    renderCloudFiles();
-  };
-
-  function updateAuthButton(){
-    const btn = document.getElementById("tnxAuthBtn");
-    if(!btn) return;
-    if(currentUser){
-      btn.innerText = "خروج (" + currentUser.email + ")";
-      btn.onclick = tnxLogout;
-    } else {
-      btn.innerText = "ورود / ثبت‌نام جهانی";
-      btn.onclick = openAuthModal;
-    }
-  }
-
-  function addAuthButton(){
-    if(document.getElementById("tnxAuthBtn")) return;
-    const b = document.createElement("button");
-    b.id = "tnxAuthBtn";
-    b.style.cssText = "position:fixed;top:12px;left:12px;z-index:99999;padding:9px 14px;border:0;border-radius:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);";
-    b.innerText = "ورود / ثبت‌نام جهانی";
-    b.onclick = openAuthModal;
-    document.body.appendChild(b);
-  }
-
-  // ---------- پروژه‌ها جهانی ----------
-  async function renderCloudProjects(){
-    const dash = document.getElementById("dashboard");
-    if(!dash) return;
-
-    let box = document.getElementById("cloudProjectsBox");
-    if(!box){
-      box = document.createElement("div");
-      box.id = "cloudProjectsBox";
-      box.style.cssText = "margin:18px;padding:18px;background:#fff;border:1px solid #dbe5f0;border-radius:16px;box-shadow:0 8px 25px rgba(0,0,0,.08);";
-      dash.appendChild(box);
-    }
-
-    if(!currentUser){
-      box.innerHTML = `
-        <h3 style="margin:0 0 8px;">پروژه‌های جهانی (Supabase)</h3>
-        <p style="color:#6b7c93;font-size:13px;">برای دیدن یا ثبت پروژه جهانی، ابتدا وارد شوید.</p>
-      `;
-      return;
-    }
-
-    box.innerHTML = `
-      <h3 style="margin:0 0 8px;">پروژه‌های جهانی</h3>
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <input id="cpName" placeholder="نام پروژه" style="flex:1;min-width:150px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
-        <input id="cpCity" placeholder="شهر" style="flex:1;min-width:120px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
-        <button onclick="addCloudProject()" style="border:0;border-radius:10px;padding:10px 14px;background:#16a34a;color:#fff;font-weight:bold;cursor:pointer;">ثبت پروژه جهانی</button>
-      </div>
-      <div id="cloudProjectsList" style="font-size:13px;">در حال بارگذاری...</div>
-    `;
-
-    const { data, error } = await sb.from("tnx_projects").select("*").order("created_at",{ascending:false});
-    const list = document.getElementById("cloudProjectsList");
-
-    if(error){ list.innerText = "خطا: " + error.message; return; }
-    if(!data.length){ list.innerText = "هنوز پروژه‌ای جهانی ثبت نشده."; return; }
-
-    list.innerHTML = data.map(p => `
-      <div style="padding:10px 0;border-bottom:1px solid #eef2f7;">
-        <b>${safe(p.name)}</b> — ${safe(p.city || "")} <small style="color:#6b7c93;">(${safe(p.status)})</small>
-      </div>
-    `).join("");
-  }
-
-  window.addCloudProject = async function(){
-    if(!currentUser){ alert("اول وارد شوید."); return; }
-    const name = document.getElementById("cpName").value.trim();
-    const city = document.getElementById("cpCity").value.trim();
-    if(!name){ alert("نام پروژه را بنویسید."); return; }
-
-    const { error } = await sb.from("tnx_projects").insert({
-      name, city, owner_id: currentUser.id
-    });
-
-    if(error){ alert("خطا: " + error.message); return; }
-    document.getElementById("cpName").value = "";
-    document.getElementById("cpCity").value = "";
-    renderCloudProjects();
-  };
-
-  // ---------- فایل‌های جهانی ----------
-  async function renderCloudFiles(){
-    const page = document.getElementById("filesPage");
-    if(!page) return;
-
-    let box = document.getElementById("cloudFilesBox");
-    if(!box){
-      box = document.createElement("div");
-      box.id = "cloudFilesBox";
-      box.style.cssText = "margin-top:18px;padding:18px;background:#fff;border:1px solid #dbe5f0;border-radius:16px;";
-      page.appendChild(box);
-    }
-
-    if(!currentUser){
-      box.innerHTML = `<h3>فایل‌های جهانی</h3><p style="color:#6b7c93;font-size:13px;">برای آپلود، اول وارد شوید.</p>`;
-      return;
-    }
-
-    const { data: projects } = await sb.from("tnx_projects").select("id,name").order("created_at",{ascending:false});
-
-    box.innerHTML = `
-      <h3 style="margin:0 0 10px;">فایل‌های جهانی (Supabase Storage)</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-        <select id="cfProject" style="flex:1;min-width:160px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
-          ${(projects||[]).map(p=>`<option value="${p.id}">${safe(p.name)}</option>`).join("") || "<option value=''>اول پروژه بسازید</option>"}
+/* ==================== مدیریت کاربران و لاگ‌ها (Admin) ==================== */
+async function loadAdminData() {
+  if (currentProfile?.role !== "admin") return;
+
+  // ۱. لیست کاربران از profiles
+  const { data: users } = await sb.from("profiles").select("*").order("created_at", { ascending: false });
+  document.getElementById("userRows").innerHTML = (users || []).map(u => {
+    const isSelf = u.id === currentUser.id;
+    return `<tr>
+      <td><b>${esc(u.full_name || "—")}</b></td>
+      <td>${esc(u.email || "—")}</td>
+      <td>
+        <select ${isSelf?"disabled":""} onchange="changeUserRole('${u.id}',this.value)">
+          ${Object.entries(ROLES).map(([k,v]) => `<option value="${k}" ${u.role===k?"selected":""}>${v}</option>`).join("")}
         </select>
-        <input id="cfFile" type="file" multiple style="flex:1;min-width:160px;padding:8px;">
-        <button onclick="uploadCloudFiles()" style="border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;">آپلود جهانی</button>
-      </div>
-      <div id="cloudFilesList" style="font-size:13px;">در حال بارگذاری...</div>
-    `;
+      </td>
+      <td>${u.approved ? '<span class="tag active">تأییدشده</span>' : '<span class="tag pending">در انتظار تأیید</span>'}</td>
+      <td>${new Date(u.created_at).toLocaleDateString("fa-IR")}</td>
+      <td>
+        ${isSelf ? "حساب اصلی" : u.approved
+          ? `<button class="btn red sm" onclick="setUserApproved('${u.id}',false)">لغو دسترسی</button>`
+          : `<button class="btn sm" onclick="setUserApproved('${u.id}',true)">✅ تأیید کاربر</button>`}
+      </td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="6" class="empty">کاربری یافت نشد.</td></tr>`;
 
-    loadCloudFilesList();
-  }
+  // ۲. لاگ‌های ورود از login_events
+  const { data: logins } = await sb.from("login_events").select("*").order("created_at", { ascending: false }).limit(25);
+  document.getElementById("loginRows").innerHTML = (logins || []).map(l => `
+    <tr>
+      <td><b>${esc(l.email)}</b></td>
+      <td>${new Date(l.created_at).toLocaleString("fa-IR")}</td>
+      <td><small style="color:var(--m)">${esc(l.user_agent?.slice(0,70))}</small></td>
+    </tr>
+  `).join("") || `<tr><td colspan="3" class="empty">ورودی ثبت نشده است.</td></tr>`;
+}
 
-  async function loadCloudFilesList(){
-    const projectId = document.getElementById("cfProject")?.value;
-    const list = document.getElementById("cloudFilesList");
-    if(!list) return;
+async function setUserApproved(userId, isApproved) {
+  const { error } = await sb.from("profiles").update({ approved: isApproved }).eq("id", userId);
+  if (error) { toast("خطا: " + error.message); return; }
+  toast(isApproved ? "کاربر با موفقیت تأیید شد ✅" : "دسترسی کاربر لغو شد.");
+  loadAdminData();
+}
 
-    if(!projectId){ list.innerText = "اول پروژه را بسازید."; return; }
+async function changeUserRole(userId, newRole) {
+  const { error } = await sb.from("profiles").update({ role: newRole }).eq("id", userId);
+  if (error) { toast("خطا: " + error.message); return; }
+  toast("نقش کاربر تغییر یافت.");
+}
 
-    const { data, error } = await sb.storage.from(BUCKET).list(projectId, {limit:100, sortBy:{column:"created_at",order:"desc"}});
-    if(error){ list.innerText = "خطا: " + error.message; return; }
-    if(!data.length){ list.innerText = "فایلی برای این پروژه آپلود نشده."; return; }
+async function logActivity(act) {
+  try {
+    await sb.from("activity_logs").insert({ actor_id: currentUser.id, action: act });
+    loadActivities();
+  } catch(e){}
+}
 
-    list.innerHTML = data.map(f => `
-      <div style="padding:8px 0;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;gap:8px;">
-        <span>${safe(f.name)} <small style="color:#6b7c93;">(${sizeText(f.metadata && f.metadata.size || 0)})</small></span>
-        <span>
-          <button onclick="downloadCloudFile('${projectId}/${safe(f.name)}')" style="border:0;background:#eef2f7;border-radius:8px;padding:6px 10px;cursor:pointer;">دانلود</button>
-        </span>
-      </div>
-    `).join("");
-  }
+async function loadActivities() {
+  const { data } = await sb.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(7);
+  document.getElementById("dActivities").innerHTML = (data || []).map(a => `
+    <div class="li">${esc(a.action)}<small>${new Date(a.created_at).toLocaleString("fa-IR")}</small></div>
+  `).join("") || `<div class="empty">فعالیتی ثبت نشده است.</div>`;
+}
 
-  window.uploadCloudFiles = async function(){
-    if(!currentUser){ alert("اول وارد شوید."); return; }
-    const projectId = document.getElementById("cfProject").value;
-    const files = document.getElementById("cfFile").files;
-    if(!projectId){ alert("اول پروژه بسازید."); return; }
-    if(!files.length){ alert("فایل انتخاب کنید."); return; }
+function toggleDark() {
+  document.body.classList.toggle("dark");
+  localStorage.setItem("tnx_theme", document.body.classList.contains("dark") ? "dark" : "light");
+}
+if (localStorage.getItem("tnx_theme") === "dark") document.body.classList.add("dark");
 
-    for(const f of files){
-      const name = Date.now() + "_" + f.name.replace(/[^\w.\-]+/g,"_");
-      const path = projectId + "/" + name;
-      const { error } = await sb.storage.from(BUCKET).upload(path, f, {upsert:false});
-      if(error){ alert("خطا: " + error.message); return; }
-    }
-
-    alert("فایل‌ها آپلود شدند ✅");
-    loadCloudFilesList();
-  };
-
-  window.downloadCloudFile = async function(path){
-    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 600);
-    if(error){ alert("خطا: " + error.message); return; }
-    window.open(data.signedUrl, "_blank");
-  };
-
-  // ---------- Init ----------
-  (async function init(){
-    addAuthButton();
-
-    const { data } = await sb.auth.getSession();
-    if(data.session){ currentUser = data.session.user; }
-    updateAuthButton();
-
-    const oldGoPage = window.goPage;
-    window.goPage = function(id, btn){
-      if(typeof oldGoPage === "function") oldGoPage(id, btn);
-      if(id === "dashboard") renderCloudProjects();
-      if(id === "filesPage") renderCloudFiles();
-    };
-
-    renderCloudProjects();
-  })();
-})();
+// استارت بررسی احراز هویت هنگام باز شدن سایت
+checkAuthSession();
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function(){
-  const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
-  const BUCKET = "project-files";
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  let user = null;
-
-  function esc(v){
-    return String(v || "").replace(/[&<>"']/g, c => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-  }
-
-  function sizeTxt(b){
-    b = Number(b||0);
-    if(b>1024*1024) return (b/1024/1024).toFixed(2) + " MB";
-    return Math.ceil(b/1024) + " KB";
-  }
-
-  function makeAuthBtn(){
-    if(document.getElementById("tnxAuthBtn")) return;
-    const btn = document.createElement("button");
-    btn.id = "tnxAuthBtn";
-    btn.style.cssText = "position:fixed;top:12px;left:12px;z-index:99999;padding:9px 14px;border:0;border-radius:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);";
-    btn.innerText = "ورود / ثبت‌نام جهانی";
-    btn.onclick = openAuth;
-    document.body.appendChild(btn);
-  }
-
-  function updateAuthBtn(){
-    const b = document.getElementById("tnxAuthBtn");
-    if(!b) return;
-    if(user){
-      b.innerText = "خروج (" + user.email + ")";
-      b.onclick = logout;
-    } else {
-      b.innerText = "ورود / ثبت‌نام جهانی";
-      b.onclick = openAuth;
-    }
-  }
-
-  function openAuth(){
-    if(document.getElementById("tnxAuth")) return;
-    const box = document.createElement("div");
-    box.id = "tnxAuth";
-    box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:15px;direction:rtl;font-family:Tahoma,Arial;";
-    box.innerHTML = `
-      <div style="background:#fff;color:#111;width:min(400px,100%);border-radius:16px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <h3 style="margin:0;">ورود / ثبت‌نام جهانی</h3>
-          <button onclick="document.getElementById('tnxAuth').remove()" style="border:0;background:#eef2f7;border-radius:10px;padding:7px 11px;cursor:pointer;">بستن</button>
-        </div>
-        <label style="font-size:13px;font-weight:bold;">ایمیل</label>
-        <input id="tnxEmail" type="email" style="width:100%;padding:11px;margin:6px 0 10px;border:1px solid #cbd5e1;border-radius:10px;">
-        <label style="font-size:13px;font-weight:bold;">رمز عبور</label>
-        <input id="tnxPass" type="password" style="width:100%;padding:11px;margin:6px 0 14px;border:1px solid #cbd5e1;border-radius:10px;">
-        <div style="display:flex;gap:8px;">
-          <button onclick="tnxLogin()" style="flex:1;border:0;border-radius:11px;padding:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;">ورود</button>
-          <button onclick="tnxSignup()" 
-          <script>
-(function(){
-  // جلوگیری از پاک‌شدن داشبورد و بخش‌های دیگر توسط ماژول Supabase
-  function fix(){
-    const dash = document.getElementById("dashboard");
-    if(dash && dash.children.length <= 1){
-      // داشبورد خالی شده؛ یک پیام راهنما نشان بده
-      dash.innerHTML = `
-        <div style="padding:22px;">
-          <h1 style="margin:0 0 6px;">داشبورد</h1>
-          <p style="color:#6b7c93;font-size:13px;">
-            داشبورد اصلی به حالت عادی باز می‌شود. برای ثبت پروژه جهانی، از کارت پایین استفاده کنید.
-          </p>
-          <div id="dashReloadHint" style="margin-top:10px;">
-            <button onclick="location.reload()" style="border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;">بارگذاری مجدد</button>
-          </div>
-        </div>
-      `;
-    }
-
-    const users = document.getElementById("usersPage") || document.getElementById("users") ;
-    // اگر صفحه کاربران وجود دارد ولی خالی است
-    document.querySelectorAll("section.page").forEach(sec=>{
-      if(sec.innerText.trim() === ""){
-        sec.innerHTML = `
-          <div style="padding:22px;">
-            <h2>این صفحه موقتاً خالی است</h2>
-            <p style="color:#6b7c93;font-size:13px;">
-              برای بازگشت ظاهر کامل، دکمه زیر را بزنید.
-            </p>
-            <button onclick="location.reload()" style="border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;">بارگذاری مجدد</button>
-          </div>
-        `;
-      }
-    });
-  }
-
-  setTimeout(fix, 800);
-  setTimeout(fix, 2500);
-})();
-</script>
 </body>
 </html>
