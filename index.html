@@ -2256,5 +2256,270 @@ body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
   });
 })();
 </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
+  const BUCKET = "project-files";
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let currentUser = null;
+
+  function safe(v){
+    return String(v || "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function sizeText(b){
+    b = Number(b || 0);
+    if(b > 1024*1024) return (b/1024/1024).toFixed(2) + " MB";
+    return Math.ceil(b/1024) + " KB";
+  }
+
+  function openAuthModal(){
+    if(document.getElementById("tnxAuth")) return;
+
+    const box = document.createElement("div");
+    box.id = "tnxAuth";
+    box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:15px;direction:rtl;font-family:Tahoma,Arial;";
+
+    box.innerHTML = `
+      <div style="background:#fff;color:#111;width:min(400px,100%);border-radius:16px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="margin:0;">ورود / ثبت‌نام جهانی</h3>
+          <button onclick="document.getElementById('tnxAuth').remove()" style="border:0;background:#eef2f7;border-radius:10px;padding:7px 11px;cursor:pointer;">بستن</button>
+        </div>
+
+        <label style="font-size:13px;font-weight:bold;">ایمیل</label>
+        <input id="tnxEmail" type="email" style="width:100%;padding:11px;margin:6px 0 10px;border:1px solid #cbd5e1;border-radius:10px;">
+
+        <label style="font-size:13px;font-weight:bold;">رمز عبور</label>
+        <input id="tnxPass" type="password" style="width:100%;padding:11px;margin:6px 0 14px;border:1px solid #cbd5e1;border-radius:10px;">
+
+        <div style="display:flex;gap:8px;">
+          <button onclick="tnxLogin()" style="flex:1;border:0;border-radius:11px;padding:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;">ورود</button>
+          <button onclick="tnxSignup()" style="flex:1;border:0;border-radius:11px;padding:11px;background:#111827;color:#fff;font-weight:bold;cursor:pointer;">ثبت‌نام</button>
+        </div>
+
+        <p id="tnxMsg" style="margin-top:12px;font-size:12px;color:#b91c1c;"></p>
+      </div>
+    `;
+
+    document.body.appendChild(box);
+  }
+
+  window.tnxLogin = async function(){
+    const email = document.getElementById("tnxEmail").value.trim();
+    const pass = document.getElementById("tnxPass").value;
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if(error){ document.getElementById("tnxMsg").innerText = "خطا: " + error.message; return; }
+    currentUser = data.user;
+    document.getElementById("tnxAuth").remove();
+    alert("ورود موفق ✅");
+    updateAuthButton();
+    renderCloudProjects();
+    renderCloudFiles();
+  };
+
+  window.tnxSignup = async function(){
+    const email = document.getElementById("tnxEmail").value.trim();
+    const pass = document.getElementById("tnxPass").value;
+    const { error } = await sb.auth.signUp({ email, password: pass });
+    if(error){ document.getElementById("tnxMsg").innerText = "خطا: " + error.message; return; }
+    alert("ثبت‌نام انجام شد. حالا دکمه ورود را بزنید.");
+  };
+
+  window.tnxLogout = async function(){
+    await sb.auth.signOut();
+    currentUser = null;
+    updateAuthButton();
+    alert("خروج انجام شد.");
+    renderCloudProjects();
+    renderCloudFiles();
+  };
+
+  function updateAuthButton(){
+    const btn = document.getElementById("tnxAuthBtn");
+    if(!btn) return;
+    if(currentUser){
+      btn.innerText = "خروج (" + currentUser.email + ")";
+      btn.onclick = tnxLogout;
+    } else {
+      btn.innerText = "ورود / ثبت‌نام جهانی";
+      btn.onclick = openAuthModal;
+    }
+  }
+
+  function addAuthButton(){
+    if(document.getElementById("tnxAuthBtn")) return;
+    const b = document.createElement("button");
+    b.id = "tnxAuthBtn";
+    b.style.cssText = "position:fixed;top:12px;left:12px;z-index:99999;padding:9px 14px;border:0;border-radius:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);";
+    b.innerText = "ورود / ثبت‌نام جهانی";
+    b.onclick = openAuthModal;
+    document.body.appendChild(b);
+  }
+
+  // ---------- پروژه‌ها جهانی ----------
+  async function renderCloudProjects(){
+    const dash = document.getElementById("dashboard");
+    if(!dash) return;
+
+    let box = document.getElementById("cloudProjectsBox");
+    if(!box){
+      box = document.createElement("div");
+      box.id = "cloudProjectsBox";
+      box.style.cssText = "margin:18px;padding:18px;background:#fff;border:1px solid #dbe5f0;border-radius:16px;box-shadow:0 8px 25px rgba(0,0,0,.08);";
+      dash.appendChild(box);
+    }
+
+    if(!currentUser){
+      box.innerHTML = `
+        <h3 style="margin:0 0 8px;">پروژه‌های جهانی (Supabase)</h3>
+        <p style="color:#6b7c93;font-size:13px;">برای دیدن یا ثبت پروژه جهانی، ابتدا وارد شوید.</p>
+      `;
+      return;
+    }
+
+    box.innerHTML = `
+      <h3 style="margin:0 0 8px;">پروژه‌های جهانی</h3>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <input id="cpName" placeholder="نام پروژه" style="flex:1;min-width:150px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
+        <input id="cpCity" placeholder="شهر" style="flex:1;min-width:120px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
+        <button onclick="addCloudProject()" style="border:0;border-radius:10px;padding:10px 14px;background:#16a34a;color:#fff;font-weight:bold;cursor:pointer;">ثبت پروژه جهانی</button>
+      </div>
+      <div id="cloudProjectsList" style="font-size:13px;">در حال بارگذاری...</div>
+    `;
+
+    const { data, error } = await sb.from("tnx_projects").select("*").order("created_at",{ascending:false});
+    const list = document.getElementById("cloudProjectsList");
+
+    if(error){ list.innerText = "خطا: " + error.message; return; }
+    if(!data.length){ list.innerText = "هنوز پروژه‌ای جهانی ثبت نشده."; return; }
+
+    list.innerHTML = data.map(p => `
+      <div style="padding:10px 0;border-bottom:1px solid #eef2f7;">
+        <b>${safe(p.name)}</b> — ${safe(p.city || "")} <small style="color:#6b7c93;">(${safe(p.status)})</small>
+      </div>
+    `).join("");
+  }
+
+  window.addCloudProject = async function(){
+    if(!currentUser){ alert("اول وارد شوید."); return; }
+    const name = document.getElementById("cpName").value.trim();
+    const city = document.getElementById("cpCity").value.trim();
+    if(!name){ alert("نام پروژه را بنویسید."); return; }
+
+    const { error } = await sb.from("tnx_projects").insert({
+      name, city, owner_id: currentUser.id
+    });
+
+    if(error){ alert("خطا: " + error.message); return; }
+    document.getElementById("cpName").value = "";
+    document.getElementById("cpCity").value = "";
+    renderCloudProjects();
+  };
+
+  // ---------- فایل‌های جهانی ----------
+  async function renderCloudFiles(){
+    const page = document.getElementById("filesPage");
+    if(!page) return;
+
+    let box = document.getElementById("cloudFilesBox");
+    if(!box){
+      box = document.createElement("div");
+      box.id = "cloudFilesBox";
+      box.style.cssText = "margin-top:18px;padding:18px;background:#fff;border:1px solid #dbe5f0;border-radius:16px;";
+      page.appendChild(box);
+    }
+
+    if(!currentUser){
+      box.innerHTML = `<h3>فایل‌های جهانی</h3><p style="color:#6b7c93;font-size:13px;">برای آپلود، اول وارد شوید.</p>`;
+      return;
+    }
+
+    const { data: projects } = await sb.from("tnx_projects").select("id,name").order("created_at",{ascending:false});
+
+    box.innerHTML = `
+      <h3 style="margin:0 0 10px;">فایل‌های جهانی (Supabase Storage)</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <select id="cfProject" style="flex:1;min-width:160px;padding:10px;border:1px solid #cbd5e1;border-radius:10px;">
+          ${(projects||[]).map(p=>`<option value="${p.id}">${safe(p.name)}</option>`).join("") || "<option value=''>اول پروژه بسازید</option>"}
+        </select>
+        <input id="cfFile" type="file" multiple style="flex:1;min-width:160px;padding:8px;">
+        <button onclick="uploadCloudFiles()" style="border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;">آپلود جهانی</button>
+      </div>
+      <div id="cloudFilesList" style="font-size:13px;">در حال بارگذاری...</div>
+    `;
+
+    loadCloudFilesList();
+  }
+
+  async function loadCloudFilesList(){
+    const projectId = document.getElementById("cfProject")?.value;
+    const list = document.getElementById("cloudFilesList");
+    if(!list) return;
+
+    if(!projectId){ list.innerText = "اول پروژه را بسازید."; return; }
+
+    const { data, error } = await sb.storage.from(BUCKET).list(projectId, {limit:100, sortBy:{column:"created_at",order:"desc"}});
+    if(error){ list.innerText = "خطا: " + error.message; return; }
+    if(!data.length){ list.innerText = "فایلی برای این پروژه آپلود نشده."; return; }
+
+    list.innerHTML = data.map(f => `
+      <div style="padding:8px 0;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;gap:8px;">
+        <span>${safe(f.name)} <small style="color:#6b7c93;">(${sizeText(f.metadata && f.metadata.size || 0)})</small></span>
+        <span>
+          <button onclick="downloadCloudFile('${projectId}/${safe(f.name)}')" style="border:0;background:#eef2f7;border-radius:8px;padding:6px 10px;cursor:pointer;">دانلود</button>
+        </span>
+      </div>
+    `).join("");
+  }
+
+  window.uploadCloudFiles = async function(){
+    if(!currentUser){ alert("اول وارد شوید."); return; }
+    const projectId = document.getElementById("cfProject").value;
+    const files = document.getElementById("cfFile").files;
+    if(!projectId){ alert("اول پروژه بسازید."); return; }
+    if(!files.length){ alert("فایل انتخاب کنید."); return; }
+
+    for(const f of files){
+      const name = Date.now() + "_" + f.name.replace(/[^\w.\-]+/g,"_");
+      const path = projectId + "/" + name;
+      const { error } = await sb.storage.from(BUCKET).upload(path, f, {upsert:false});
+      if(error){ alert("خطا: " + error.message); return; }
+    }
+
+    alert("فایل‌ها آپلود شدند ✅");
+    loadCloudFilesList();
+  };
+
+  window.downloadCloudFile = async function(path){
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 600);
+    if(error){ alert("خطا: " + error.message); return; }
+    window.open(data.signedUrl, "_blank");
+  };
+
+  // ---------- Init ----------
+  (async function init(){
+    addAuthButton();
+
+    const { data } = await sb.auth.getSession();
+    if(data.session){ currentUser = data.session.user; }
+    updateAuthButton();
+
+    const oldGoPage = window.goPage;
+    window.goPage = function(id, btn){
+      if(typeof oldGoPage === "function") oldGoPage(id, btn);
+      if(id === "dashboard") renderCloudProjects();
+      if(id === "filesPage") renderCloudFiles();
+    };
+
+    renderCloudProjects();
+  })();
+})();
+</script>
 </body>
 </html>
