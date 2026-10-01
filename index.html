@@ -2521,5 +2521,67 @@ body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
   })();
 })();
 </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  const SUPABASE_URL = "https://ypeukrgjhvfgndmqmnnd.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_P7nBgtBmkW8s97i51ePCYg_L8kb_dr0";
+  const BUCKET = "project-files";
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let user = null;
+
+  function esc(v){
+    return String(v || "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function sizeTxt(b){
+    b = Number(b||0);
+    if(b>1024*1024) return (b/1024/1024).toFixed(2) + " MB";
+    return Math.ceil(b/1024) + " KB";
+  }
+
+  function makeAuthBtn(){
+    if(document.getElementById("tnxAuthBtn")) return;
+    const btn = document.createElement("button");
+    btn.id = "tnxAuthBtn";
+    btn.style.cssText = "position:fixed;top:12px;left:12px;z-index:99999;padding:9px 14px;border:0;border-radius:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25);";
+    btn.innerText = "ورود / ثبت‌نام جهانی";
+    btn.onclick = openAuth;
+    document.body.appendChild(btn);
+  }
+
+  function updateAuthBtn(){
+    const b = document.getElementById("tnxAuthBtn");
+    if(!b) return;
+    if(user){
+      b.innerText = "خروج (" + user.email + ")";
+      b.onclick = logout;
+    } else {
+      b.innerText = "ورود / ثبت‌نام جهانی";
+      b.onclick = openAuth;
+    }
+  }
+
+  function openAuth(){
+    if(document.getElementById("tnxAuth")) return;
+    const box = document.createElement("div");
+    box.id = "tnxAuth";
+    box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999999;display:flex;align-items:center;justify-content:center;padding:15px;direction:rtl;font-family:Tahoma,Arial;";
+    box.innerHTML = `
+      <div style="background:#fff;color:#111;width:min(400px,100%);border-radius:16px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="margin:0;">ورود / ثبت‌نام جهانی</h3>
+          <button onclick="document.getElementById('tnxAuth').remove()" style="border:0;background:#eef2f7;border-radius:10px;padding:7px 11px;cursor:pointer;">بستن</button>
+        </div>
+        <label style="font-size:13px;font-weight:bold;">ایمیل</label>
+        <input id="tnxEmail" type="email" style="width:100%;padding:11px;margin:6px 0 10px;border:1px solid #cbd5e1;border-radius:10px;">
+        <label style="font-size:13px;font-weight:bold;">رمز عبور</label>
+        <input id="tnxPass" type="password" style="width:100%;padding:11px;margin:6px 0 14px;border:1px solid #cbd5e1;border-radius:10px;">
+        <div style="display:flex;gap:8px;">
+          <button onclick="tnxLogin()" style="flex:1;border:0;border-radius:11px;padding:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;">ورود</button>
+          <button onclick="tnxSignup()" 
 </body>
 </html>
