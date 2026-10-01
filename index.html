@@ -2583,5 +2583,46 @@ body.tnx-locked>.sidebar,body.tnx-locked>.main{display:none!important}
         <div style="display:flex;gap:8px;">
           <button onclick="tnxLogin()" style="flex:1;border:0;border-radius:11px;padding:11px;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;font-weight:bold;cursor:pointer;">ورود</button>
           <button onclick="tnxSignup()" 
+          <script>
+(function(){
+  // جلوگیری از پاک‌شدن داشبورد و بخش‌های دیگر توسط ماژول Supabase
+  function fix(){
+    const dash = document.getElementById("dashboard");
+    if(dash && dash.children.length <= 1){
+      // داشبورد خالی شده؛ یک پیام راهنما نشان بده
+      dash.innerHTML = `
+        <div style="padding:22px;">
+          <h1 style="margin:0 0 6px;">داشبورد</h1>
+          <p style="color:#6b7c93;font-size:13px;">
+            داشبورد اصلی به حالت عادی باز می‌شود. برای ثبت پروژه جهانی، از کارت پایین استفاده کنید.
+          </p>
+          <div id="dashReloadHint" style="margin-top:10px;">
+            <button onclick="location.reload()" style="border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;">بارگذاری مجدد</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const users = document.getElementById("usersPage") || document.getElementById("users") ;
+    // اگر صفحه کاربران وجود دارد ولی خالی است
+    document.querySelectorAll("section.page").forEach(sec=>{
+      if(sec.innerText.trim() === ""){
+        sec.innerHTML = `
+          <div style="padding:22px;">
+            <h2>این صفحه موقتاً خالی است</h2>
+            <p style="color:#6b7c93;font-size:13px;">
+              برای بازگشت ظاهر کامل، دکمه زیر را بزنید.
+            </p>
+            <button onclick="location.reload()" style="border:0;border-radius:10px;padding:10px 14px;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;">بارگذاری مجدد</button>
+          </div>
+        `;
+      }
+    });
+  }
+
+  setTimeout(fix, 800);
+  setTimeout(fix, 2500);
+})();
+</script>
 </body>
 </html>
