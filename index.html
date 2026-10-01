@@ -2578,5 +2578,50 @@ window.TNX_D_email=function(){var to=document.getElementById('tnxD_email').value
 wait();
 })();
 </script>
+  <!-- TNX Fix CSV Copy Email v2.5.1 -->
+<script>
+(function(){
+function getM(){try{if(typeof map!=='undefined'&&map&&map.eachLayer)return map;}catch(e){}try{if(window.map&&window.map.eachLayer)return window.map;}catch(e){}return null;}
+function utm(lat,lon){var a=6378137,f=1/298.257223563,k0=0.9996,e=Math.sqrt(2*f-f*f);var z=Math.floor((lon+180)/6)+1,lon0=(z-1)*6-180+3;var la=lat*Math.PI/180,lo=lon*Math.PI/180,lo0=lon0*Math.PI/180;var N=a/Math.sqrt(1-e*e*Math.sin(la)**2),T=Math.tan(la)**2,C=(e*e/(1-e*e))*Math.cos(la)**2,A=(lo-lo0)*Math.cos(la);var M=a*((1-e*e/4-3*e**4/64-5*e**6/256)*la-(3*e*e/8+3*e**4/32+45*e**6/1024)*Math.sin(2*la)+(15*e**4/256+45*e**6/1024)*Math.sin(4*la)-(35*e**6/3072)*Math.sin(6*la));var x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*(e*e/(1-e*e)))*A**5/120)+500000;var y=k0*(M+N*Math.tan(la)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*(e*e/(1-e*e)))*A**6/720));return{x,y,z};}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();return true;}catch(e2){prompt('کپی کن:',t);return true;}}}
+function dl(n,c,t){var b=new Blob([c],{type:t});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();},500);}
+function collectPts(){var m=getM();if(!m)return[];var pts=[];m.eachLayer(function(l){try{if(l instanceof L.Marker){var ll=l.getLatLng();if(ll)pts.push({lat:ll.lat,lng:ll.lng});}else if(l instanceof L.CircleMarker){var ll2=l.getLatLng();if(ll2)pts.push({lat:ll2.lat,lng:ll2.lng});}}catch(e){}});return pts;}
+try{var _m=getM();if(_m&&!window._tnxFixHook){window._tnxFixHook=true;_m.on('click',function(e){window._TNX_LAST=e.latlng;});}}catch(e){}
+setTimeout(function(){try{var m=getM();if(m&&!window._tnxFixHook){window._tnxFixHook=true;m.on('click',function(e){window._TNX_LAST=e.latlng;});}}catch(e){}},2000);
+
+window.TNX_D_csv=function(){
+var pts=collectPts();
+if(!pts.length){alert('نقطه‌ای پیدا نشد. اول برو نقشه هوشمند، با دکمه «📌 پین نقطه» داخل همین پنل ترسیم+چاپ، روی نقشه کلیک کن تا نقطه ثبت شود.');return;}
+var c='\uFEFFName,X_UTM,Y_UTM,Lat,Lng\n';
+pts.forEach(function(p,i){var u=utm(p.lat,p.lng);c+='P'+(i+1)+','+u.x.toFixed(2)+','+u.y.toFixed(2)+','+p.lat.toFixed(6)+','+p.lng.toFixed(6)+'\n';});
+dl('TerraNexa.csv',c,'text/csv;charset=utf-8');alert(pts.length+' نقطه در فایل اکسل ذخیره شد ✅');};
+
+window.TNX_D_copyLast=async function(){
+var ll=window._TNX_LAST||null;
+if(!ll){var pts=collectPts();if(pts.length)ll={lat:pts[pts.length-1].lat,lng:pts[pts.length-1].lng};}
+if(!ll){alert('اول روی نقشه کلیک کن');return;}
+var u=utm(ll.lat,ll.lng);var t=u.x.toFixed(3)+','+u.y.toFixed(3)+',0';
+await copyText(t);alert('کپی شد:\n'+t);};
+
+window.TNX_D_copyAll=async function(){
+var pts=collectPts();
+if(!pts.length){alert('نقطه‌ای نیست. اول پین بزن.');return;}
+var t=pts.map(function(p,i){var u=utm(p.lat,p.lng);return 'P'+(i+1)+': '+u.x.toFixed(2)+','+u.y.toFixed(2)+',0';}).join('\n');
+await copyText(t);prompt('همه نقاط کپی شد. Ctrl+C بزن:',t);};
+
+window.TNX_D_email=function(){
+var to=document.getElementById('tnxD_email')?.value.trim()||'';
+if(!to){alert('ایمیل مقصد را بنویس');return;}
+var sub=document.getElementById('tnxD_esub')?.value||'خروجی نقشه';
+var title=document.getElementById('tnxD_title')?.value||'';
+var pts=collectPts();
+var ptsTxt=pts.length?pts.map(function(p,i){var u=utm(p.lat,p.lng);return 'P'+(i+1)+': '+u.x.toFixed(2)+','+u.y.toFixed(2)+',0';}).join('\n'):'— نقطه‌ای روی نقشه نیست —';
+var body='عنوان: '+title+'\nتعداد نقاط: '+pts.length+'\n\n'+ptsTxt+'\n\nلینک سایت: '+location.href+'\n\nتوجه: فایل CSV را جداگانه دانلود و دستی به ایمیل ضمیمه کن.';
+copyText(body);
+var url='mailto:'+to+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body);
+window.location.href=url;
+setTimeout(()=>{alert('متن مختصات کپی شد ✅\nاگر برنامه ایمیل باز نشد، متن را دستی Paste کن.\nبرای ارسال فایل، اول CSV را دانلود کن و دستی Attach کن چون mailto فایل ضمیمه نمی‌کند.');},500);};
+})();
+</script>
  </body>
 </html>
